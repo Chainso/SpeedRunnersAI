@@ -10,7 +10,5 @@ SpeedRunnersAI learns to emulate how you play SpeedRunners using only images of 
 The following dependencies are all required to run the program. They can be installed using pip/conda.
 
 PyUserInput
-
 H5PY
-
 PyTorch
