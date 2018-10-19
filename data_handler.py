@@ -77,3 +77,15 @@ class DataHandler():
         config.read("config.ini")
     
         return config["Training"], config["Window Size"]
+
+    def get_states(self):
+        """
+        Returns the states in the HDF5 file
+        """
+        return self.states
+
+    def get_actions(self):
+        """
+        Returns the actions in the HDF5 File
+        """
+        return self.actions

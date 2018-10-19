@@ -12,3 +12,6 @@ The following dependencies are all required to run the program. They can be inst
 PyUserInput
 H5PY
 PyTorch
+mss
+PIL
+opencv
