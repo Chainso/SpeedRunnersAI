@@ -1,7 +1,7 @@
 import numpy as np
 
 from data_handler import DataHandler
-#from screen_viewer import ScreenViewer
+from screen_viewer import ScreenViewer
 
 from collections import OrderedDict
 from threading import Thread
@@ -12,7 +12,7 @@ class Recorder(PyKeyboardEvent):
     """
     A keyboard event listener to start and stop the recording.
     """
-    def __init__(self, save_interval):
+    def __init__(self):
         """
         Will create a keyboard event listener to handle the recording and
         closing of the program using the settings in the config file.
@@ -35,12 +35,15 @@ class Recorder(PyKeyboardEvent):
         self.close_key = recording_config["CLOSE_KEY"].lower()
         self.save_interval = int(recording_config["SAVE_INTERVAL"])
 
-        # Get the screen size from the config
-        screen_size = (int(window_size["WIDTH"]), int(window_size["HEIGHT"]),
-                       int(window_size["DEPTH"]))
+        # Get the game screen size
+        game_screen = self.bindings["WIDTH"], self.bindings["HEIGHT"]
 
-        #self.sv = ScreenViewer(screen_size)
-        #self.sv.GetHandle("SpeedRunners")
+        # Get the resized screen size from the config
+        res_screen_size = (int(window_size["WIDTH"]), int(window_size["HEIGHT"]),
+                           int(window_size["DEPTH"]))
+
+        self.sv = ScreenViewer(game_screen, res_screen_size)
+
 
         # The data handler for the training data, using read and write mode    
         self.data_handler = DataHandler("a")
@@ -74,7 +77,7 @@ class Recorder(PyKeyboardEvent):
             while(self.recording):
                 # Get the state and current action
                 state = self.sv.GetScreen()
-                action = [self.actions[press] for press in self.actions]
+                action = [self.actions[button] for button in self.actions]
 
                 # Append to the list of states and actions
                 states.append(state)
@@ -94,7 +97,6 @@ class Recorder(PyKeyboardEvent):
         """
         Will handle the key press event to start, stop and end the program.
         """
-        print(character, press)
         if(press):
             # Start recording on the recording key press
             if(character == self.start_key and not self.recording):
@@ -148,7 +150,7 @@ class Recorder(PyKeyboardEvent):
         config.read("config.ini")
     
         return (config["Recording"], config["Window Size"],
-                config["SpeedRunners Bindings"])
+                config["SpeedRunners Config"])
          
 if(__name__ == "__main__"):
     # Make the keyboard listener
