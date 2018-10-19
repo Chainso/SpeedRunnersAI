@@ -14,4 +14,4 @@ H5PY\
 PyTorch\
 mss\
 PIL\
-opencv\
+opencv
