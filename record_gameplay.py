@@ -23,10 +23,10 @@ class Recorder(PyKeyboardEvent):
         self.recording = False
 
         # If the program is listening to the keyboard
-        self.listening = True
+        self.listening = False
 
         # Get the information from the config
-        recording_config, window_size, self.bindings = self.read_config()
+        recording_config, window_size, self.speedrunners = self.read_config()
 
         # Get the start, end and close key and the save interval from the
         # config
@@ -36,39 +36,39 @@ class Recorder(PyKeyboardEvent):
         self.save_interval = int(recording_config["SAVE_INTERVAL"])
 
         # Get the game screen size
-        game_screen = self.bindings["WIDTH"], self.bindings["HEIGHT"]
+        game_screen = (int(self.speedrunners["WIDTH"]),
+                       int(self.speedrunners["HEIGHT"]))
 
         # Get the resized screen size from the config
-        res_screen_size = (int(window_size["WIDTH"]), int(window_size["HEIGHT"]),
+        res_screen_size = (int(window_size["WIDTH"]),
+                           int(window_size["HEIGHT"]),
                            int(window_size["DEPTH"]))
 
         self.sv = ScreenViewer(game_screen, res_screen_size)
-
 
         # The data handler for the training data, using read and write mode    
         self.data_handler = DataHandler("a")
 
         # The active actions and direction, right direction by default
-        self.actions = [(self.bindings["JUMP"], 0),
-                        (self.bindings["GRAPPLE"], 0),
-                        (self.bindings["ITEM"], 0),
-                        (self.bindings["BOOST"], 0),
-                        (self.bindings["SLIDE"], 0),
+        self.actions = [(self.speedrunners["JUMP"], 0),
+                        (self.speedrunners["GRAPPLE"], 0),
+                        (self.speedrunners["ITEM"], 0),
+                        (self.speedrunners["BOOST"], 0),
+                        (self.speedrunners["SLIDE"], 0),
                         ("direction", 1)]
         self.actions = OrderedDict(self.actions) 
-
-        # Make sure that it is listening
-        listening_loop = Thread(target = self._loop_listening)
-        listening_loop.start()
 
     def _loop_listening(self):
         """
         Ensures that the program will continue listening until closure
         """
+        # Create a list of states and actions
+        states = []
+        actions = []
+
         while(self.listening):
-            # Create a list of states and actions
-            states = []
-            actions = []
+            # The last state
+            last_state = None
 
             # The save counter
             save_counter = 0
@@ -76,12 +76,14 @@ class Recorder(PyKeyboardEvent):
             # Record the keys and game frames while recording is enabled
             while(self.recording):
                 # Get the state and current action
-                state = self.sv.GetScreen()
+                state = self.sv.GetNewScreen(last_state)
                 action = [self.actions[button] for button in self.actions]
 
                 # Append to the list of states and actions
                 states.append(state)
                 actions.append(action)
+
+                last_state = state
 
                 save_counter += 1
 
@@ -91,7 +93,13 @@ class Recorder(PyKeyboardEvent):
                     states = np.stack(states)
                     actions = np.stack(actions)
 
+                    # Create a thread to save the data
+                    #saver = Thread(target = self.data_handler.add,
+                                   #args = (states, actions))
+                    #saver.start()
                     self.data_handler.add(states, actions)
+                    states = []
+                    actions = []
 
     def tap(self, keycode, character, press):
         """
@@ -108,10 +116,10 @@ class Recorder(PyKeyboardEvent):
             elif(character == self.close_key):
                 self.close_program()
             # Check for left direction
-            elif(character == self.bindings["LEFT"]):
+            elif(character == self.speedrunners["LEFT"]):
                 self.actions["direction"] = 0
-            # Check for right direction
-            elif(character == self.bindings["RIGHT"]):
+            # Check for right directionjj
+            elif(character == self.speedrunners["RIGHT"]):
                 self.actions["direction"] = 1
             # Otherwise map the key to the action
             elif(character in self.actions):
@@ -124,20 +132,40 @@ class Recorder(PyKeyboardEvent):
         """
         Will cause the program to start recording.
         """
-        self.recording = True
+        if(not self.recording):
+            print("Recording started")
+            self.recording = True
+
+        # Start the loop if it's the first time starting
+        if(not self.listening):
+            self.listening = True
+
+            # Make sure the keys are being recorded
+            loop_listening = Thread(target = self._loop_listening)
+            loop_listening.start()
+
+            # Start recording the screen
+            self.sv.Start()
 
     def stop_recording(self):
         """
         Will cause the program to stop recording
         """
-        self.recording = False
+        if(self.recording):
+            print("Recording paused")
+            self.recording = False
+            self.sv.Stop()
 
     def close_program(self):
         """
         Will close the program.
         """
-        self.recording = False
-        self.listening = False
+        if(self.listening):
+            print("Recording stopped")
+            self.recording = False
+            self.listening = False
+            self.sv.Stop()
+        self.stop()
 
     def read_config(self):
         """
@@ -151,8 +179,8 @@ class Recorder(PyKeyboardEvent):
     
         return (config["Recording"], config["Window Size"],
                 config["SpeedRunners Config"])
-         
+
 if(__name__ == "__main__"):
     # Make the keyboard listener
     recorder = Recorder()
-    recorder.start()
+    recorder.run()

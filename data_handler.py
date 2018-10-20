@@ -34,14 +34,14 @@ class DataHandler():
                                                    maxshape = (None,
                                                                *screen_size))
 
-            self.actions = self.file.create_dataset("actions", (0, 19),
-                                                    maxshape = (None, 19))
+            self.actions = self.file.create_dataset("actions", (0, 6),
+                                                    maxshape = (None, 6))
         else:
             self.states = self.file["states"]
             self.actions = self.file["actions"]
 
     def resize(self, size):
-        """
+        """ 
         Resizes the datasets in order to accomodate the size given
         """
         # Add the given size to the current size of the datasets
@@ -53,18 +53,18 @@ class DataHandler():
         Adds the given states, actions and directions to the dataset
 
         states : The states to add to the dataset
-        actions : The actions to add to the dataset
+        actions : The actions toj add to the dataset
         """
         # Make sure the lengths of the data is the same and greater than 0
         assert len(states) == len(actions)
         assert len(states) > 0
 
         # Resize the datasets to add the size of the new data
-        self.resize(len(states))
 
         # Add the new data to the end of the dataset
-        self.states[len(self.states) - len(states):, :, :, :] = states
-        self.actions[len(self.actions) - len(actions):, :, :] = actions
+        #self.states[len(self.states) - len(states):, :, :, :] = states
+        self.actions[len(self.actions) - len(actions):, :] = actions
+        print("added")
 
     def read_config(self):
         """

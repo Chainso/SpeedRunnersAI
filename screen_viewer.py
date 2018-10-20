@@ -13,7 +13,6 @@ class ScreenViewer:
     def __init__(self, window_size, res_shape):
         self.res_width, self.res_height, self.res_depth = res_shape
         self.width, self.height = window_size
-        self.num_img = 0
         self.mut = Lock()
         self.hwnd = None
         self.its = None         #Time stamp of last image 
@@ -32,7 +31,15 @@ class ScreenViewer:
         s = self.i0
         self.mut.release()
         return s
-         
+
+    def GetNewScreen(self, current):
+        s = self.GetScreen()
+
+        while(self.i0 is current):
+            s = self.GetScreen()
+
+        return s
+
     #Get's the latest image of the window along with timestamp
     def GetScreenWithTime(self):
         while self.i0 is None:      #Screen hasn't been captured yet
@@ -76,13 +83,13 @@ class ScreenViewer:
     #Stop the async thread that is capturing images
     def Stop(self):
         self.cl = False
-         
+        self.i0 = False
+
     #Thread used to capture images of screen
     def ScreenUpdateT(self):
         #Keep updating screen until terminating
         while self.cl:
             self.i1 = self.GetScreenImg()
-            self.num_img += 1
             self.mut.acquire()
             self.i0 = self.i1               #Update the latest image in a thread safe way
             self.its = time.time()
