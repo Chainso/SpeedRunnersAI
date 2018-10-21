@@ -63,8 +63,8 @@ class DataHandler():
 
         # Add the new data to the end of the dataset
         #self.states[len(self.states) - len(states):, :, :, :] = states
+        #print(actions)
         self.actions[len(self.actions) - len(actions):, :] = actions
-        print("added")
 
     def read_config(self):
         """

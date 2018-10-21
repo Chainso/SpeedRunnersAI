@@ -7,6 +7,7 @@ from collections import OrderedDict
 from threading import Thread
 from configparser import ConfigParser
 from pykeyboard import PyKeyboardEvent
+from time import time
 
 class Recorder(PyKeyboardEvent):
     """
@@ -56,7 +57,7 @@ class Recorder(PyKeyboardEvent):
                         (self.speedrunners["BOOST"], 0),
                         (self.speedrunners["SLIDE"], 0),
                         ("direction", 1)]
-        self.actions = OrderedDict(self.actions) 
+        self.actions = OrderedDict(self.actions)
 
     def _loop_listening(self):
         """
@@ -66,15 +67,16 @@ class Recorder(PyKeyboardEvent):
         states = []
         actions = []
 
+        # The save counter
+        save_counter = 0
         while(self.listening):
             # The last state
             last_state = None
 
-            # The save counter
-            save_counter = 0
-
-            # Record the keys and game frames while recording is enabled
+            a = time()
+            # Record the keys and gamje frames while recording is enabled
             while(self.recording):
+
                 # Get the state and current action
                 state = self.sv.GetNewScreen(last_state)
                 action = [self.actions[button] for button in self.actions]
@@ -94,12 +96,17 @@ class Recorder(PyKeyboardEvent):
                     actions = np.stack(actions)
 
                     # Create a thread to save the data
-                    #saver = Thread(target = self.data_handler.add,
-                                   #args = (states, actions))
-                    #saver.start()
-                    self.data_handler.add(states, actions)
+                    saver = Thread(target = self.data_handler.add,
+                                   args = (states, actions))
+                    saver.start()
+
+                    # Reset the states, actions and counter
                     states = []
                     actions = []
+                    save_counter = 0
+
+                    print(self.save_interval/(time() - a))
+                    a = time()
 
     def tap(self, keycode, character, press):
         """
@@ -123,10 +130,10 @@ class Recorder(PyKeyboardEvent):
                 self.actions["direction"] = 1
             # Otherwise map the key to the action
             elif(character in self.actions):
-                self.actions[character] = 0
+                self.actions[character] = 1
         # Map the key to the action
         elif(not press and character in self.actions):
-            self.actions[character] = 1
+            self.actions[character] = 0
 
     def start_recording(self):
         """
