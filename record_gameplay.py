@@ -1,24 +1,29 @@
 import numpy as np
 
-from data_handler import DataHandler
+from numpy_handler import NumpyHandler
 from screen_viewer import ScreenViewer
 
 from collections import OrderedDict
 from threading import Thread
+from multiprocessing import Process, Queue
 from configparser import ConfigParser
 from pykeyboard import PyKeyboardEvent
-from time import time
 
 class Recorder(PyKeyboardEvent):
     """
     A keyboard event listener to start and stop the recording.
     """
-    def __init__(self):
+    def __init__(self, data_queue = None):
         """
         Will create a keyboard event listener to handle the recording and
         closing of the program using the settings in the config file.
+
+        data_queue : The queue to put the data in if given
         """
         PyKeyboardEvent.__init__(self)
+
+        # The data queue
+        self.data_queue = data_queue
 
         # If the program is currently running
         self.recording = False
@@ -47,9 +52,6 @@ class Recorder(PyKeyboardEvent):
 
         self.sv = ScreenViewer(game_screen, res_screen_size)
 
-        # The data handler for the training data, using read and write mode    
-        self.data_handler = DataHandler("a")
-
         # The active actions and direction, right direction by default
         self.actions = [(self.speedrunners["JUMP"], 0),
                         (self.speedrunners["GRAPPLE"], 0),
@@ -57,7 +59,7 @@ class Recorder(PyKeyboardEvent):
                         (self.speedrunners["BOOST"], 0),
                         (self.speedrunners["SLIDE"], 0),
                         ("direction", 1)]
-        self.actions = OrderedDict(self.actions)
+        self.actions = OrderedDict(self.actions) 
 
     def _loop_listening(self):
         """
@@ -67,16 +69,15 @@ class Recorder(PyKeyboardEvent):
         states = []
         actions = []
 
-        # The save counter
-        save_counter = 0
         while(self.listening):
             # The last state
             last_state = None
 
-            a = time()
-            # Record the keys and gamje frames while recording is enabled
-            while(self.recording):
+            # The save counter
+            save_counter = 0
 
+            # Record the keys and game frames while recording is enabled
+            while(self.recording):
                 # Get the state and current action
                 state = self.sv.GetNewScreen(last_state)
                 action = [self.actions[button] for button in self.actions]
@@ -90,7 +91,7 @@ class Recorder(PyKeyboardEvent):
                 save_counter += 1
 
                 # If it is time to save then convert to numpy and save to the
-                # HDF5 file
+                # Numpy file
                 if(save_counter == self.save_interval):
                     states = np.stack(states)
                     actions = np.stack(actions)
@@ -100,13 +101,43 @@ class Recorder(PyKeyboardEvent):
                                    args = (states, actions))
                     saver.start()
 
-                    # Reset the states, actions and counter
                     states = []
                     actions = []
-                    save_counter = 0
 
-                    print(self.save_interval/(time() - a))
-                    a = time()
+    def _listen_with_queue(self):
+        """
+        Ensures that the program will continue listening until closure and put
+        the data into a queue
+        """
+        while(self.listening):
+            # The last state
+            last_state = None
+
+            # Record the keys and game frames while recording is enabled
+            while(self.recording):
+                # Get the state and current action
+                state = self.sv.GetNewScreen(last_state)
+                action = [self.actions[button] for button in self.actions]
+
+                # Put the state and action in a queue
+                self.data_queue.put([state, action]);
+
+                last_state = state
+
+    def run(self, data_queue = None):
+        """
+        Will run the recorder, using a queue to place data if provided
+
+        data_queue : The queue to place the data in
+        """
+        self.data_queue = data_queue
+
+        # The data handler for the training data, using read and write mode
+        # Only open the file if not using queues
+        if(self.data_queue is None):   
+            self.data_handler = NumpyHandler("ab+", self.save_interval)
+
+        PyKeyboardEvent.run(self)
 
     def tap(self, keycode, character, press):
         """
@@ -125,15 +156,15 @@ class Recorder(PyKeyboardEvent):
             # Check for left direction
             elif(character == self.speedrunners["LEFT"]):
                 self.actions["direction"] = 0
-            # Check for right directionjj
+            # Check for right direction
             elif(character == self.speedrunners["RIGHT"]):
                 self.actions["direction"] = 1
             # Otherwise map the key to the action
             elif(character in self.actions):
-                self.actions[character] = 1
+                self.actions[character] = 0
         # Map the key to the action
         elif(not press and character in self.actions):
-            self.actions[character] = 0
+            self.actions[character] = 1
 
     def start_recording(self):
         """
@@ -148,7 +179,11 @@ class Recorder(PyKeyboardEvent):
             self.listening = True
 
             # Make sure the keys are being recorded
-            loop_listening = Thread(target = self._loop_listening)
+            # Use the queue listening loop if a queue was provided
+            if(self.data_queue is not None):
+                loop_listening = Thread(target = self._listen_with_queue)
+            else:
+                loop_listening = Thread(target = self._loop_listening)
             loop_listening.start()
 
             # Start recording the screen
@@ -172,6 +207,10 @@ class Recorder(PyKeyboardEvent):
             self.recording = False
             self.listening = False
             self.sv.Stop()
+
+        if(self.data_queue is not None):
+            self.data_queue.put("END")
+
         self.stop()
 
     def read_config(self):
@@ -183,11 +222,36 @@ class Recorder(PyKeyboardEvent):
     
         # Read the config file, make sure not to re-name
         config.read("config.ini")
-    
+
         return (config["Recording"], config["Window Size"],
                 config["SpeedRunners Config"])
 
 if(__name__ == "__main__"):
+    # Get the save interval from the configuration
+    config = ConfigParser()
+
+    # Read the config file, make sure not to re-name
+    config.read("config.ini")
+
+    save_interval = int(config["Recording"]["SAVE_INTERVAL"])
+    """
+    # The data queue
+    data_queue = Queue()
+
     # Make the keyboard listener
+    recorder = Recorder()
+    
+    # The recorder process
+    record_proc = Process(target = recorder.run, args = (data_queue,))
+
+    # The data handler
+    data_handler = NumpyHandler("ab+", save_interval)
+
+    # The data process
+    data_proc = Process(target = data_handler.save_from_queue,
+                        args = (data_queue,))
+    data_proc.start()
+    record_proc.start()
+    """
     recorder = Recorder()
     recorder.run()
