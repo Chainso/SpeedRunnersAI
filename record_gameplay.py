@@ -247,7 +247,7 @@ if(__name__ == "__main__"):
     record_proc = Process(target = recorder.run, args = (data_queue,))
 
     # The data handler
-    data_handler = HDF5Handler("a", save_interval)
+    data_handler = NumpyHandler("ab+", save_interval)
 
     # The data process
     data_proc = Process(target = data_handler.save_from_queue,

@@ -60,7 +60,6 @@ class NumpyHandler():
             # Get from the queue until it is time to save
             while(len(states) < self.save_interval and not end_proc):
                 if(queue.empty()):
-                    print("loop")
                     # Get the message from the queue
                     msg = queue.get()
 
