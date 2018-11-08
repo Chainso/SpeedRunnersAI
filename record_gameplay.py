@@ -1,6 +1,7 @@
 import numpy as np
 
 from numpy_handler import NumpyHandler
+from hdf5_handler import HDF5Handler
 from screen_viewer import ScreenViewer
 
 from collections import OrderedDict
@@ -103,6 +104,7 @@ class Recorder(PyKeyboardEvent):
 
                     states = []
                     actions = []
+                    save_counter = 0
 
     def _listen_with_queue(self):
         """
@@ -234,7 +236,7 @@ if(__name__ == "__main__"):
     config.read("config.ini")
 
     save_interval = int(config["Recording"]["SAVE_INTERVAL"])
-    """
+
     # The data queue
     data_queue = Queue()
 
@@ -245,13 +247,10 @@ if(__name__ == "__main__"):
     record_proc = Process(target = recorder.run, args = (data_queue,))
 
     # The data handler
-    data_handler = NumpyHandler("ab+", save_interval)
+    data_handler = HDF5Handler("a", save_interval)
 
     # The data process
     data_proc = Process(target = data_handler.save_from_queue,
                         args = (data_queue,))
     data_proc.start()
     record_proc.start()
-    """
-    recorder = Recorder()
-    recorder.run()

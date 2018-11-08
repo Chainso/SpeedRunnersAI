@@ -40,6 +40,7 @@ class NumpyHandler():
 
         # Add the new data to the end of the dataset
         np.savez_compressed(self.file, states = states, actions = actions)
+        print("saved")
         self.file.flush()
 
     def save_from_queue(self, queue):

@@ -99,7 +99,6 @@ class HDF5Handler():
                     # Check if it the end message, break and save if it is
                     if(msg == "END"):
                         end_proc = True
-                        self.file.close()
                     else:
                         # Then it is a state and action
                         state, action = msg
@@ -115,8 +114,10 @@ class HDF5Handler():
                 actions = np.stack(actions)
 
                 # Save the states and actions
-                add_thread = Thread(target =self.add, args = (states, actions))
+                add_thread = Thread(target = self.add, args = (states, actions))
                 add_thread.start()
+
+        self.file.close()
 
     def close(self):
         self.file.close()
