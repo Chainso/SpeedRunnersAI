@@ -1,8 +1,6 @@
 import h5py
-import numpy as np
 
 from configparser import ConfigParser
-from threading import Thread
 
 class HDF5Handler():
     """
@@ -75,49 +73,6 @@ class HDF5Handler():
         self.actions[len(self.actions) - len(actions):, :] = actions
 
         self.file.flush()
-
-    def save_from_queue(self, queue):
-        """
-        Obtain data from a queue and save it (used in multiprocessing)
-
-        queue : The queue to get the states and actions from
-        """
-        # The process just started
-        end_proc = False
-
-        while(not end_proc):
-            # The states and actions to save
-            states = []
-            actions = []
-
-            # Get from the queue until it is time to save
-            while(len(states) < self.chunk_size and not end_proc):
-                if(queue.empty()):
-                    # Get the message from the queue
-                    msg = queue.get()
-    
-                    # Check if it the end message, break and save if it is
-                    if(msg == "END"):
-                        end_proc = True
-                    else:
-                        # Then it is a state and action
-                        state, action = msg
-    
-                        # Append them to the list of states
-                        states.append(state)
-                        actions.append(action)
-
-            if(len(states) > 0):
-                # Convert to a numpy array
-                
-                states = np.stack(states)
-                actions = np.stack(actions)
-
-                # Save the states and actions
-                add_thread = Thread(target = self.add, args = (states, actions))
-                add_thread.start()
-
-        self.file.close()
 
     def close(self):
         self.file.close()

@@ -1,12 +1,10 @@
 import numpy as np
 
-from numpy_handler import NumpyHandler
 from hdf5_handler import HDF5Handler
 from screen_viewer import ScreenViewer
 
 from collections import OrderedDict
 from threading import Thread
-from multiprocessing import Process, Queue
 from configparser import ConfigParser
 from pykeyboard import PyKeyboardEvent
 
@@ -14,17 +12,12 @@ class Recorder(PyKeyboardEvent):
     """
     A keyboard event listener to start and stop the recording.
     """
-    def __init__(self, data_queue = None):
+    def __init__(self):
         """
         Will create a keyboard event listener to handle the recording and
         closing of the program using the settings in the config file.
-
-        data_queue : The queue to put the data in if given
         """
         PyKeyboardEvent.__init__(self)
-
-        # The data queue
-        self.data_queue = data_queue
 
         # If the program is currently running
         self.recording = False
@@ -106,38 +99,14 @@ class Recorder(PyKeyboardEvent):
                     actions = []
                     save_counter = 0
 
-    def _listen_with_queue(self):
-        """
-        Ensures that the program will continue listening until closure and put
-        the data into a queue
-        """
-        while(self.listening):
-            # The last state
-            last_state = None
-
-            # Record the keys and game frames while recording is enabled
-            while(self.recording):
-                # Get the state and current action
-                state = self.sv.GetNewScreen(last_state)
-                action = [self.actions[button] for button in self.actions]
-
-                # Put the state and action in a queue
-                self.data_queue.put([state, action]);
-
-                last_state = state
-
-    def run(self, data_queue = None):
+    def run(self):
         """
         Will run the recorder, using a queue to place data if provided
 
         data_queue : The queue to place the data in
         """
-        self.data_queue = data_queue
-
-        # The data handler for the training data, using read and write mode
-        # Only open the file if not using queues
-        if(self.data_queue is None):   
-            self.data_handler = NumpyHandler("ab+", self.save_interval)
+        # Create the data handler to use
+        self.data_handler = HDF5Handler("a", self.save_interval)
 
         PyKeyboardEvent.run(self)
 
@@ -180,12 +149,8 @@ class Recorder(PyKeyboardEvent):
         if(not self.listening):
             self.listening = True
 
-            # Make sure the keys are being recorded
-            # Use the queue listening loop if a queue was provided
-            if(self.data_queue is not None):
-                loop_listening = Thread(target = self._listen_with_queue)
-            else:
-                loop_listening = Thread(target = self._loop_listening)
+            # Create a thread for the main loop
+            loop_listening = Thread(target = self._loop_listening)
             loop_listening.start()
 
             # Start recording the screen
@@ -210,9 +175,6 @@ class Recorder(PyKeyboardEvent):
             self.listening = False
             self.sv.Stop()
 
-        if(self.data_queue is not None):
-            self.data_queue.put("END")
-
         self.stop()
 
     def read_config(self):
@@ -229,28 +191,6 @@ class Recorder(PyKeyboardEvent):
                 config["SpeedRunners Config"])
 
 if(__name__ == "__main__"):
-    # Get the save interval from the configuration
-    config = ConfigParser()
-
-    # Read the config file, make sure not to re-name
-    config.read("config.ini")
-
-    save_interval = int(config["Recording"]["SAVE_INTERVAL"])
-
-    # The data queue
-    data_queue = Queue()
-
     # Make the keyboard listener
     recorder = Recorder()
-    
-    # The recorder process
-    record_proc = Process(target = recorder.run, args = (data_queue,))
-
-    # The data handler
-    data_handler = NumpyHandler("ab+", save_interval)
-
-    # The data process
-    data_proc = Process(target = data_handler.save_from_queue,
-                        args = (data_queue,))
-    data_proc.start()
-    record_proc.start()
+    recorder.run()
