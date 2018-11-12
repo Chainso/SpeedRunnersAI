@@ -52,7 +52,7 @@ class Recorder(PyKeyboardEvent):
                         (self.speedrunners["ITEM"], 0),
                         (self.speedrunners["BOOST"], 0),
                         (self.speedrunners["SLIDE"], 0),
-                        ("direction", 1)]
+                        (self.speedrunners["RIGHT"], 1)]
         self.actions = OrderedDict(self.actions) 
 
     def _loop_listening(self):
@@ -124,18 +124,15 @@ class Recorder(PyKeyboardEvent):
             # Close the program on the close key press
             elif(character == self.close_key):
                 self.close_program()
-            # Check for left direction
+            # Check for left key as well
             elif(character == self.speedrunners["LEFT"]):
-                self.actions["direction"] = 0
-            # Check for right direction
-            elif(character == self.speedrunners["RIGHT"]):
-                self.actions["direction"] = 1
+                self.actions[self.speedrunners["RIGHT"]] = 0
             # Otherwise map the key to the action
             elif(character in self.actions):
-                self.actions[character] = 0
+                self.actions[character] = 1
         # Map the key to the action
         elif(not press and character in self.actions):
-            self.actions[character] = 1
+            self.actions[character] = 0
 
     def start_recording(self):
         """
@@ -175,6 +172,7 @@ class Recorder(PyKeyboardEvent):
             self.listening = False
             self.sv.Stop()
 
+        self.data_handler.close()
         self.stop()
 
     def read_config(self):

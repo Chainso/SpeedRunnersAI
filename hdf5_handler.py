@@ -75,6 +75,9 @@ class HDF5Handler():
         self.file.flush()
 
     def close(self):
+        """
+        Closes the file
+        """
         self.file.close()
 
     def read_config(self):
