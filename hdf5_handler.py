@@ -1,4 +1,5 @@
 import h5py
+import numpy as np
 
 from configparser import ConfigParser
 
@@ -37,21 +38,28 @@ class HDF5Handler():
                                                    chunks = (chunk_size,
                                                              *screen_size),
                                                    maxshape = (None,
-                                                               *screen_size))
+                                                               *screen_size),
+                                                   dtype = "i8")
 
             self.actions = self.file.create_dataset("actions", (0, 6),
-                                                   chunks = (chunk_size, 6),
+                                                    chunks = (chunk_size, 6),
                                                     maxshape = (None, 6))
         else:
             self.states = self.file["states"]
             self.actions = self.file["actions"]
+
+    def len(self):
+        """
+        The size of the dataset
+        """
+        return len(self.states)
 
     def resize(self, size):
         """ 
         Resizes the datasets in order to accomodate the size given
         """
         # Add the given size to the current size of the datasets
-        #self.states.resize(len(self.states) + size, axis = 0)
+        self.states.resize(len(self.states) + size, axis = 0)
         self.actions.resize(len(self.actions) + size, axis = 0)
         
     def add(self, states, actions):
@@ -69,7 +77,7 @@ class HDF5Handler():
         self.resize(len(states))
 
         # Add the new data to the end of the dataset
-        #self.states[len(self.states) - len(states):, :, :, :] = states
+        self.states[len(self.states) - len(states):, :, :, :] = states
         self.actions[len(self.actions) - len(actions):, :] = actions
 
         self.file.flush()
@@ -92,14 +100,115 @@ class HDF5Handler():
     
         return config["Training"], config["Window Size"]
 
-    def get_states(self):
+    def sample(self, num_samples, cuda = False):
         """
-        Returns the states in the HDF5 file
-        """
-        return self.states
+        Retrieves the given number of samples from the training data
 
-    def get_actions(self):
+        num_samples : The number of samples to retrieve
+        cuda : If the sample should return a cuda tensor
+        """
+        # The states and actions to be returned
+        states = []
+        actions = []
+
+        # Get the random indices to get data from
+        randIndices = np.random.randint(0, len(self), num_samples)
+
+        # Get the state and action at that index
+        states.append(self.states[randIndices, :, :, :])
+        actions.append(self.actions[randIndices, :])
+
+        # Stack the array
+        states = (np.stack(states) / 255.0)
+        actions = np.stack(actions)
+
+        # Convert to PyTorch tensor
+        if(cuda):
+            states = torch.cuda.FloatTensor(states).permute(0, 3, 1, 2)
+            actions = torch.cuda.FloatTensor(actions)
+        else:
+            states = torch.FloatTensor(states).permute(0, 3, 1, 2)
+            actions = torch.FloatTensor(actions)
+
+        return states, actions
+
+    def sequenced_sample(self, num_samples, sample_size, cuda = False):
+        """
+        Retreives a sequence of the given sample sie at random from the
+        training data
+
+        num_samples : The number of sample to get
+        sample_size : The size of each sample
+        cuda : If the sample should be a cuda tensor
+        """
+        # The states and actions to be returned
+        states = []
+        actions = []
+
+        # Get the random indices to get data from
+        randIndices = np.random.randint(0, len(self) - sample_size, num_samples)
+
+        # Get the state and action at that index
+        states.append(self.states[randIndices:randIndices + sample_size])
+        actions.append(self.actions[randIndices:randIndices + sample_size])
+
+        # Stack the arrays
+        states = (np.stack(states) / 255.0)
+        actions = np.stack(actions)
+
+        # Convert to PyTorch tensor
+        if(cuda):
+            states = torch.cuda.FloatTensor(states).permute(0, 1, 4, 2, 3)
+            actions = torch.cuda.FloatTensor(actions)
+        else:
+            states = torch.FloatTensor(states).permute(0, 1, 4, 2, 3)
+            actions = torch.FloatTensor(actions)
+
+        return states, actions
+
+    def get_shuffled(self, cuda = False):
+        """
+        Returns the training data shuffled
+
+        cuda : If the training data should be a cuda tensor
+        """
+        return self.sample(len(self, cuda))
+
+    def get_states(self, start_index = 0, end_index = len(self), cuda = False):
+        """
+        Returns the states in the HDF5 file as a PyTorch Tensor
+
+        start_index : The index to start retrieving from
+        end_index : The index to stop at
+        cuda : If the states should be a cuda tensor
+        """
+        # Bound values from 0-1
+        np_states = np.stack(self.states[start_index:end_index] / 255.0)
+
+        # Get the proper tensor and permute
+        if(cuda):
+            tens_states = torch.cuda.FloatTensor(np_states).permute(0, 3, 1, 2)
+        else:
+            tens_states = torch.FloatTensor(np_states).permute(0, 3, 1, 2)
+
+        return tens_states
+
+    def get_actions(self, start_index = 0, end_index = len(self), cuda = False):
         """
         Returns the actions in the HDF5 File
+
+        start_index : The index to start retrieving from
+        end_index : The index to stop at
+        cuda : If the states should be a cuda tensor
         """
-        return self.actions
+        # Bound values from 0-1
+        np_actions = np.stack(self.actions[start_index:end_index])
+
+        # Get the proper tensor
+        if(cuda):
+            tens_actions = torch.cuda.LongTensor(np_actions)
+        else:
+            tens_actions = torch.LongTensor(np_actions)
+
+        return tens_actions
+    

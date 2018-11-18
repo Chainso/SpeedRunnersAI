@@ -1,29 +1,31 @@
 import torch
 import torch.nn as nn
 
-from configparser import ConfigParser
-
-from utils import linear_network, conv_network, forward
+from vae import VAE
+from distributions import MultiCategoricalDistribution
+from utils import LSTM
 
 class Model(nn.Module):
     def __init__(self):
         """
-        Creates the model used for the bot
+        Creates the model to be used by the bot
         """
-        nn.Module.__init__(self)
+        # Set the encoded size and get the decoder input channels
+        self.enc_size = 128
+        self.dec_input_channels = 128 // 16
 
-        self.window_size = self.read_config()
+        # Get the variational autoencoder
+        self.vae = VAE(self.enc_size, self.dec_input_channels)
 
-        self.encoder = Encoder((self.window_size["WIDTH"],
-                               self.window_size["HEIGHT"]), 100)
+        # The LSTM
+        self.lstm = LSTM(self.enc_size, self.enc_size, 3, dropout = True,
+                         minibatch_size = 1)
 
-    def forward(self, inp):
-        """
-        Propogates the model for the given input
+        # Get the multi-categorical distribution
+        self.action = MultiCategoricalDistribution(self.enc_size, 6)
 
-        inp : The given images to run the model on
-        """
-        pass
+        # The optimizer for the model
+        self.optim = torch.optim.Adam(self.parameters(), lr = 1e-3)
 
     def get_action(self, inp):
         """
@@ -31,53 +33,73 @@ class Model(nn.Module):
 
         inp : The input images to get the actions for
         """
-        pass
+        # Get the encoded input sample and resize to input to LSTM
+        enc_sample = self.vae.sample(self.vae.encode(inp))
+        enc_sample = enc_sample.view(enc_sample.size()[0], 1,
+                                     enc_sample.size()[-1])
 
-    def read_config(self):
-        """
-        Reads the config file to obtain the settings for the recorder, the
-        window size for the training data and the game bindings
-        """
-        config = ConfigParser()
-    
-        # Read the config file, make sure not to re-name
-        config.read("config.ini")
+        # Get the LSTM output and reshape for action distribution input
+        lstm = self.lstm(enc_sample)
+        lstm = lstm.view(lstm.size()[0], lstm.size()[-1])
 
-        return config["Window Size"]
+        # Get the actions
+        actions = self.action.distribution(lstm)
 
-class Encoder(nn.Module):
-    def __init__(self, image_shape, enc_size):
-        """
-        Creates the encoder for the training images
+        # Round the values
+        return torch.round(actions)
 
-        image_shape : The shape of the input images
-        enc_size : The length of the vectors of means and standard deviations
+    def calculate_loss(self, inp, actions):
         """
-        nn.Module.__init__(self)
+        Calculates the loss for the given input image and action
 
-    def forward(self, inp):
+        inp : The input images
+        action : The target actions
         """
-        Encodes the given image into two vectors of means and
-        standard deviations
+        # Get the means, log standard deviations, distribution sample and
+        # generated images
+        means, log_stds, sample, gen_imgs = self.vae(inp)
 
-        inp : The input images to encode
-        """
-        pass
+        # Get the lstm output for the input sample
+        lstm = self.lstm(sample)
 
-class Decoder(nn.Module):
-    def __init__(self, image_shape, enc_size):
-        """
-        Creates the decoder for the encoded training images
+        # Get the VAE loss
+        vae_loss = self.vae.calculate_loss(inp, means, log_stds, gen_imgs)
 
-        image_shape : The shape of the input images
-        enc_size : The length of the vectors of means and standard deviations
-        """
-        nn.Module.__init__(self)
+        # Get the multi-categorical distributions loss
+        action_loss = self.action.calculate_loss(lstm, actions)
 
-    def forward(self, inp):
-        """
-        Decodes the given distribution sample into an image
+        return vae_loss + action_loss
 
-        inp : The input distribution sample to decode
+    def train(self, inp, actions):
         """
-        pass
+        Trains the network for the batch of inputs and actions
+
+        inp : The input images
+        actions : The target actions
+        """
+        # Get the loss
+        loss = self.calculate_loss(inp, actions)
+
+        # Proprogate the loss backwards
+        self.optim.zero_grad()
+        loss.backward()
+        self.optim.step()
+
+        # Return a numpy array of the losses
+        return loss.detach().numpy()
+
+    def save(self, save_path):
+        """
+        Saves the model at the given save path
+
+        save_path : The path to save the model at
+        """
+        torch.save(self.state_dict(), save_path)
+
+    def load(self, load_path):
+        """
+        Loads the model at the given load path
+
+        load_path : The of the model to load
+        """
+        self.load_state_dict(torch.load(load_path))
