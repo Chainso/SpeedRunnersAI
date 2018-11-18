@@ -1,6 +1,5 @@
 from model import Model
 from hdf5_handler import HDF5Handler
-from builtins import False
 
 def train_model(model, data_handler, epochs, batch_size, cuda, save_path):
     if(cuda):
