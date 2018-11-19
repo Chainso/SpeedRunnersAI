@@ -21,7 +21,7 @@ class Actor():
                               (self.speedrunners["SLIDE"], 0),
                               (self.speedrunners["RIGHT"], 1)]
         self.action_values = OrderedDict(self.action_values)
-        self.action_values_items = list(self.action_functions.items())
+        self.action_values_items = list(self.action_values.items())
 
     def act(self, actions):
         """
@@ -70,7 +70,7 @@ class Actor():
             self.action_values[action] = 1
 
             # Make sure to stop left if starting right
-            if(self.action == self.speedrunners["RIGHT"]):
+            if(action == self.speedrunners["RIGHT"]):
                 self.keyboard.release_key(self.speedrunners["LEFT"])
 
     def stop_action(self, action, total_reset = False):
@@ -92,11 +92,11 @@ class Actor():
             self.action_values[action] = 0
 
             # Make sure to press left if stopping right
-            if(self.action == self.speedrunners["RIGHT"] and not total_reset):
+            if(action == self.speedrunners["RIGHT"] and not total_reset):
                 self.keyboard.press_key(self.speedrunners["LEFT"])
 
         # Check if left is pushed down and release if total reset
-        elif(not value and self.action == self.speedrunners["RIGHT"] and
+        elif(not value and action == self.speedrunners["RIGHT"] and
              total_reset):
             self.keyboard.release_key(self.speedrunners["LEFT"])
 

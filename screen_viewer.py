@@ -35,7 +35,7 @@ class ScreenViewer:
     def GetNewScreen(self, current):
         s = self.GetScreen()
 
-        while(self.i0 is current):
+        while(s is current):
             s = self.GetScreen()
 
         return s
@@ -50,7 +50,7 @@ class ScreenViewer:
         self.mut.release()
         return s, t
          
-    #Gets the screen of the window referenced by self.hwnd
+    # Gets the screen of the window referenced by self.hwnd
     def GetScreenImg(self):
         sct_img = self.screen.grab(self.monitor)
         im = Image.frombytes('RGB', sct_img.size, sct_img.rgb)

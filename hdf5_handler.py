@@ -1,4 +1,5 @@
 import h5py
+import torch
 import numpy as np
 
 from configparser import ConfigParser
@@ -48,7 +49,7 @@ class HDF5Handler():
             self.states = self.file["states"]
             self.actions = self.file["actions"]
 
-    def len(self):
+    def __len__(self):
         """
         The size of the dataset
         """
@@ -174,7 +175,7 @@ class HDF5Handler():
         """
         return self.sample(len(self, cuda))
 
-    def get_states(self, start_index = 0, end_index = len(self), cuda = False):
+    def get_states(self, start_index = 0, end_index = None, cuda = False):
         """
         Returns the states in the HDF5 file as a PyTorch Tensor
 
@@ -182,6 +183,10 @@ class HDF5Handler():
         end_index : The index to stop at
         cuda : If the states should be a cuda tensor
         """
+        # Convert the end index being none to the end of the array
+        if(end_index is None):
+            end_index = len(self)
+
         # Bound values from 0-1
         np_states = np.stack(self.states[start_index:end_index] / 255.0)
 
@@ -193,7 +198,7 @@ class HDF5Handler():
 
         return tens_states
 
-    def get_actions(self, start_index = 0, end_index = len(self), cuda = False):
+    def get_actions(self, start_index = 0, end_index = None, cuda = False):
         """
         Returns the actions in the HDF5 File
 
@@ -201,14 +206,18 @@ class HDF5Handler():
         end_index : The index to stop at
         cuda : If the states should be a cuda tensor
         """
+        # Convert the end index being none to the end of the array
+        if(end_index is None):
+            end_index = len(self)
+
         # Bound values from 0-1
         np_actions = np.stack(self.actions[start_index:end_index])
 
         # Get the proper tensor
         if(cuda):
-            tens_actions = torch.cuda.LongTensor(np_actions)
+            tens_actions = torch.cuda.FloatTensor(np_actions)
         else:
-            tens_actions = torch.LongTensor(np_actions)
+            tens_actions = torch.FloatTensor(np_actions)
 
         return tens_actions
     

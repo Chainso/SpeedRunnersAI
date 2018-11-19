@@ -10,16 +10,18 @@ class Model(nn.Module):
         """
         Creates the model to be used by the bot
         """
-        # Set the encoded size and get the decoder input channels
+        nn.Module.__init__(self)
+
+        # Set the encoded size and get the decoder input channels and dist shape
         self.enc_size = 128
-        self.dec_input_channels = 128 // 16
+        self.dist_shape = 4
+        self.dec_input_channels = 128 // (self.dist_shape ** 2)
 
         # Get the variational autoencoder
-        self.vae = VAE(self.enc_size, self.dec_input_channels)
+        self.vae = VAE(self.enc_size, self.dist_shape, self.dec_input_channels)
 
         # The LSTM
-        self.lstm = LSTM(self.enc_size, self.enc_size, 3, dropout = True,
-                         minibatch_size = 1)
+        self.lstm = LSTM(1, self.enc_size, self.enc_size, 3, dropout = 0.3)
 
         # Get the multi-categorical distribution
         self.action = MultiCategoricalDistribution(self.enc_size, 6)
@@ -27,14 +29,14 @@ class Model(nn.Module):
         # The optimizer for the model
         self.optim = torch.optim.Adam(self.parameters(), lr = 1e-3)
 
-    def get_action(self, inp):
+    def forward(self, inp):
         """
         Returns the action vector for the given input images
 
         inp : The input images to get the actions for
         """
         # Get the encoded input sample and resize to input to LSTM
-        enc_sample = self.vae.sample(self.vae.encode(inp))
+        enc_sample = self.vae.sample(*self.vae.encode(inp))
         enc_sample = enc_sample.view(enc_sample.size()[0], 1,
                                      enc_sample.size()[-1])
 
@@ -46,7 +48,7 @@ class Model(nn.Module):
         actions = self.action.distribution(lstm)
 
         # Round the values
-        return torch.round(actions)
+        return torch.round(actions).detach().numpy()
 
     def calculate_loss(self, inp, actions):
         """
@@ -59,8 +61,12 @@ class Model(nn.Module):
         # generated images
         means, log_stds, sample, gen_imgs = self.vae(inp)
 
+        # Add the next dimension for the LSTM
+        sample = sample.view(sample.size()[0], 1, sample.size()[-1])
+
         # Get the lstm output for the input sample
-        lstm = self.lstm(sample)
+        lstm = self.lstm(sample.detach())
+        lstm = lstm.view(lstm.size()[0], lstm.size()[-1])
 
         # Get the VAE loss
         vae_loss = self.vae.calculate_loss(inp, means, log_stds, gen_imgs)

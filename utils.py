@@ -1,5 +1,6 @@
+import torch
 import torch.nn as nn
-from caffe2.python.pipeline import Output
+
 
 def forward(inp, layers, activations):
     """
@@ -78,27 +79,28 @@ def inverse_conv_network(input_channels, out_channels, kernel_sizes, strides,
     return nn.ModuleList(layers)
 
 class LSTM(nn.LSTM):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, minibatch_size, *args, **kwargs):
         """
         Creates an LSTM with the given arguments. The arguments and dictionary
         of arguments are the same as the ones in PyTorch's nn.LSTM module
 
+        minibatch_size : The minibatch size of the LSTM
         *args : The arguments for the LSTM
         **kwargs : A dictionary of named arguments for the LSTM
         """
         # Call nn.LSTM's init with the given arguments
-        nn.LSTM.__init__(*args, **kwargs)
+        nn.LSTM.__init__(self, *args, **kwargs)
 
         # Get the minibatch size
-        self.minibatch_size = kwargs["minibatch_size"]
+        self.minibatch_size = minibatch_size
 
         # Create the hidden layer with 0 initialization
-        self.hidden_layers = (torch.zeros(self.num_layers,
+        self.hidden_layers = [torch.zeros(self.num_layers,
                                           self.minibatch_size,
                                           self.hidden_size),
                               torch.zeros(self.num_layers,
                                           self.minibatch_size,
-                                          self.hidden_size))
+                                          self.hidden_size)]
 
     def forward(self, inp):
         """
@@ -110,7 +112,7 @@ class LSTM(nn.LSTM):
         out, hidden = nn.LSTM.forward(self, inp, self.hidden_layers)
 
         # Set the new hidden state
-        self.hidden_layers = hidden
+        self.hidden_layers = [h.detach() for h in hidden]
 
         return out
 

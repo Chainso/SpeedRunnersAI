@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-class MultiCategoricalDistribution():
+class MultiCategoricalDistribution(nn.Module):
     def __init__(self, num_inputs, num_outputs):
         """
         Creates a multi-categorical distribution with the given number of
@@ -9,6 +9,8 @@ class MultiCategoricalDistribution():
         num_inputs : The number of inputs of the distribution
         num_outputs : The number of outputs of the distribution
         """
+        nn.Module.__init__(self)
+
         # The layer for the distribution
         self.output = nn.Linear(num_inputs, num_outputs)
 

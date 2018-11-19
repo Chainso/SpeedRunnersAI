@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 from configparser import ConfigParser
@@ -5,12 +6,13 @@ from configparser import ConfigParser
 from utils import conv_network, inverse_conv_network, forward
 
 class VAE(nn.Module):
-    def __init__(self, enc_size, dec_input_channels):
+    def __init__(self, enc_size, dist_shape, dec_input_channels):
         """
         Creates a variational autoencoder to be used to encode input images
 
         enc_size : The size of the means and log standard deviation vectors for
                    the encoder
+        dist_shape : The 2D shape of the distribution to decode
         dec_input_channels : The number of input channels for the decoder
         """
         nn.Module.__init__(self)
@@ -18,9 +20,14 @@ class VAE(nn.Module):
         # Get the window size
         self.window_size = self.read_config()
 
+        # The 2D shape of the distribution
+        self.dist_shape = dist_shape
+        self.dist_channels = dec_input_channels
+
         # Get the encoder and decoder
-        self.encoder = Encoder(enc_size)
-        self.decoder = Decoder(dec_input_channels)
+        self.encoder = Encoder(int(self.window_size["depth"]), enc_size)
+        self.decoder = Decoder(self.dist_channels,
+                               int(self.window_size["depth"]))
         
     def forward(self, inp):
         """
@@ -99,16 +106,17 @@ class VAE(nn.Module):
         return config["Window Size"]
 
 class Encoder(nn.Module):
-    def __init__(self, enc_size):
+    def __init__(self, input_channels, enc_size):
         """
         Creates the encoder for the training images
 
+        input_channels : The number of input channels of the image
         enc_size : The length of the vectors of means and standard deviations
         """
         nn.Module.__init__(self)
 
         # Convolution network to 2x2x256
-        self.conv = conv_network(3,
+        self.conv = conv_network(input_channels,
                                  [32, 64, 128, 256, 256],
                                  [7, 5, 3, 3, 3],
                                  [3, 2, 2, 2, 1],
@@ -140,17 +148,18 @@ class Encoder(nn.Module):
         return means, log_stds
 
 class Decoder(nn.Module):
-    def __init__(self, input_channels):
+    def __init__(self, input_channels, output_channels):
         """
         Creates the decoder for the encoded training images
 
         input_channels : The input channels of the encoded image
+        output_channels : The number of channels for the output image
         """
         nn.Module.__init__(self)
 
         # Inverse convolution network to 128x128x1 images
         self.deconv = inverse_conv_network(input_channels,
-                                           [256, 128, 64, 32, 3],
+                                           [256, 128, 64, 32, output_channels],
                                            [4, 4, 4, 4, 4],
                                            [2, 2, 2, 2, 2],
                                            [1, 1, 1, 1, 1])
@@ -165,4 +174,4 @@ class Decoder(nn.Module):
         deconv = forward(inp, self.deconv, [nn.ReLU(), nn.ReLU(), nn.ReLU(),
                                             nn.ReLU(), nn.Sigmoid()])
 
-        return deconv.permute(0, 2, 3, 1)
+        return deconv

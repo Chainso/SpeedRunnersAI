@@ -23,14 +23,15 @@ def train_model(model, data_handler, epochs, batch_size, cuda, save_path):
         print(avg_loss)
 
         # Save the model
-        model.save(save_path + "/model-" + epoch + 1)
+        model.save(save_path + "/model-" + str(epoch + 1) + ".torch")
 
 if(__name__ == "__main__"):
     model = Model()
     data_handler = HDF5Handler("r+", 1)
 
-    epochs = 10
+    epochs = 15
     batch_size = 69
     cuda = False
     save_path = "./Trained Models"
+    model.load(save_path + "/model-15.torch")
     train_model(model, data_handler, epochs, batch_size, cuda, save_path)
