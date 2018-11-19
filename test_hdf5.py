@@ -1,5 +1,4 @@
 import h5py
-import numpy as np
 
 file = h5py.File("./Training Data/training_data.hdf5", "r+")
 

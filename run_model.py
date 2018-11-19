@@ -6,6 +6,7 @@ from model import Model
 from screen_viewer import ScreenViewer
 from actor import Actor
 from time import time
+
 def run_model(model, screen_viewer, actor, load_path, cuda):
     if(cuda):
         model = model.cuda()
