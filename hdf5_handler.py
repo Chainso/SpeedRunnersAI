@@ -56,13 +56,13 @@ class HDF5Handler():
         return len(self.states)
 
     def resize(self, size):
-        """ 
+        """
         Resizes the datasets in order to accomodate the size given
         """
         # Add the given size to the current size of the datasets
         self.states.resize(len(self.states) + size, axis = 0)
         self.actions.resize(len(self.actions) + size, axis = 0)
-        
+
     def add(self, states, actions):
         """
         Adds the given states, actions and directions to the dataset
@@ -87,6 +87,7 @@ class HDF5Handler():
         """
         Closes the file
         """
+        print("Dataset size:" + len(self))
         self.file.close()
 
     def read_config(self):
@@ -95,10 +96,10 @@ class HDF5Handler():
         window size
         """
         config = ConfigParser()
-    
+
         # Read the config file, make sure not to re-name
         config.read("config.ini")
-    
+
         return config["Training"], config["Window Size"]
 
     def sample(self, num_samples, cuda = False):
@@ -220,4 +221,3 @@ class HDF5Handler():
             tens_actions = torch.FloatTensor(np_actions)
 
         return tens_actions
-    
