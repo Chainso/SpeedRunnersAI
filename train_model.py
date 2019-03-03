@@ -36,5 +36,6 @@ if(__name__ == "__main__"):
     batch_size = 69
     cuda = False
     save_path = "./Trained Models"
-    model.load(save_path + "/model-15.torch")
+    load_path = save_path + "model-15.torch"
+    model.load(load_path)
     train_model(model, data_handler, epochs, batch_size, cuda, save_path)

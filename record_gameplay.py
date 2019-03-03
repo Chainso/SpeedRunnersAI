@@ -47,12 +47,13 @@ class Recorder(PyKeyboardEvent):
         self.sv = ScreenViewer(game_screen, res_screen_size)
 
         # The active actions and direction, right direction by default
-        self.actions = [(self.speedrunners["JUMP"], 0),
-                        (self.speedrunners["GRAPPLE"], 0),
-                        (self.speedrunners["ITEM"], 0),
-                        (self.speedrunners["BOOST"], 0),
-                        (self.speedrunners["SLIDE"], 0),
-                        (self.speedrunners["RIGHT"], 1)]
+        # Values -1 for off, 1 for on
+        self.actions = [(self.speedrunners["JUMP"], -1),
+                        (self.speedrunners["GRAPPLE"], -1),
+                        (self.speedrunners["ITEM"], -1),
+                        (self.speedrunners["BOOST"], -1),
+                        (self.speedrunners["SLIDE"], -1),
+                        ("direction", 1)]
         self.actions = OrderedDict(self.actions) 
 
     def _loop_listening(self):
@@ -64,23 +65,18 @@ class Recorder(PyKeyboardEvent):
         actions = []
 
         while(self.listening):
-            # The last state
-            last_state = None
-
             # The save counter
             save_counter = 0
 
             # Record the keys and game frames while recording is enabled
             while(self.recording):
                 # Get the state and current action
-                state = self.sv.GetNewScreen(last_state)
+                state = self.sv.GetNewScreen()
                 action = [self.actions[button] for button in self.actions]
 
                 # Append to the list of states and actions
                 states.append(state)
                 actions.append(action)
-
-                last_state = state
 
                 save_counter += 1
 
@@ -126,13 +122,17 @@ class Recorder(PyKeyboardEvent):
                 self.close_program()
             # Check for left key as well
             elif(character == self.speedrunners["LEFT"]):
-                self.actions[self.speedrunners["RIGHT"]] = 0
+                self.actions["direction"] = -1
+            elif(character == self.speedrunners["RIGHT"]):
+                self.actions["direction"] = 1
             # Otherwise map the key to the action
             elif(character in self.actions):
                 self.actions[character] = 1
         # Map the key to the action
-        elif(not press and character in self.actions):
-            self.actions[character] = 0
+        elif(not press and character is not self.speedrunners["LEFT"]
+             and character is not self.speedrunners["RIGHT"]
+             and character in self.actions):
+            self.actions[character] = -1
 
     def start_recording(self):
         """

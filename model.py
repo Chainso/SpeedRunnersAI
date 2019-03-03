@@ -48,7 +48,15 @@ class Model(nn.Module):
         actions = self.action.distribution(lstm)
 
         # Round the values
-        return torch.round(actions).detach().numpy()
+        return actions
+
+    def step(self, inp):
+        """
+        Returns the action vector for a single input image
+
+        inp : The input images to get the actions for
+        """
+        return self(inp).detach().numpy()[0]
 
     def calculate_loss(self, inp, actions):
         """

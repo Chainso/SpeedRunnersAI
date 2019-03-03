@@ -14,12 +14,12 @@ class Actor():
         self.speedrunners = self.read_config()
 
         # The current values of the actions and the corresponding function
-        self.action_values = [(self.speedrunners["JUMP"], 0),
-                              (self.speedrunners["GRAPPLE"], 0),
-                              (self.speedrunners["ITEM"], 0),
-                              (self.speedrunners["BOOST"], 0),
-                              (self.speedrunners["SLIDE"], 0),
-                              (self.speedrunners["RIGHT"], 1)]
+        self.action_values = [(self.speedrunners["JUMP"], -1),
+                              (self.speedrunners["GRAPPLE"], -1),
+                              (self.speedrunners["ITEM"], -1),
+                              (self.speedrunners["BOOST"], -1),
+                              (self.speedrunners["SLIDE"], -1),
+                              ("direction", 0)]
         self.action_values = OrderedDict(self.action_values)
         self.action_values_items = list(self.action_values.items())
 
@@ -41,15 +41,15 @@ class Actor():
 
     def set_action(self, action, value):
         """
-        Will perform the action and set the value to 1 if the given value is 1,
-        otherwise will stop performing the action and set the value to 0 if the
-        given value is 0
+        Will perform the action and set the value to 1 if the given value is
+        positive, otherwise will stop performing the action and set the value
+        to -1 if the given value is negative.
 
-        action : The action to either stop or perform
-        value : The value of the action, 0 to stop, 1 to perform
+        action : The action to either stop or perform.
+        value : The value of the action, negative to stop, positive to perform.
         """
         # Check the value
-        if(not value):
+        if(value < 0):
             self.stop_action(action)
         else:
             self.single_action(action)
@@ -64,14 +64,15 @@ class Actor():
         value = self.action_values[action]
 
         # Check if the action is already down
-        if(not value):
+        if(value == -1):
             # Press the key corresponding to the action and set the value of it
-            self.keyboard.press_key(action)
-            self.action_values[action] = 1
-
-            # Make sure to stop left if starting right
-            if(action == self.speedrunners["RIGHT"]):
+            # Make sure to stop left if starting right and vice versa
+            if(action == "direction"):
+                self.keyboard.press_key(self.speedrunners["RIGHT"])
                 self.keyboard.release_key(self.speedrunners["LEFT"])
+            else:
+                self.keyboard.press_key(action)
+            self.action_values[action] = 1
 
     def stop_action(self, action, total_reset = False):
         """
@@ -85,20 +86,20 @@ class Actor():
         value = self.action_values[action]
 
         # Check if the action is already down
-        if(value):
+        if(value == 1):
             # Release the key corresponding to the action and set the value of
             # it
-            self.keyboard.release_key(action)
-            self.action_values[action] = 0
-
-            # Make sure to press left if stopping right
-            if(action == self.speedrunners["RIGHT"] and not total_reset):
+            if(action == "direction" and not total_reset):
                 self.keyboard.press_key(self.speedrunners["LEFT"])
+                self.keyboard.release_key(self.speedrunners["RIGHT"])
+            else:
+                self.keyboard.release_key(action)
+            self.action_values[action] = -1
 
         # Check if left is pushed down and release if total reset
-        elif(not value and action == self.speedrunners["RIGHT"] and
-             total_reset):
+        elif(action == "direction" and total_reset):
             self.keyboard.release_key(self.speedrunners["LEFT"])
+            self.keyboard.release_key(self.speedrunners["RIGHT"])
 
     def read_config(self):
         """
@@ -106,7 +107,7 @@ class Actor():
         window size for the training data and the game bindings
         """
         config = ConfigParser()
-    
+
         # Read the config file, make sure not to re-name
         config.read("config.ini")
 

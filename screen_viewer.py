@@ -15,30 +15,32 @@ class ScreenViewer:
         self.width, self.height = window_size
         self.mut = Lock()
         self.hwnd = None
-        self.its = None         #Time stamp of last image 
+        self.its = None         #Time stamp of last image
         self.i0 = None          #i0 is the latest image; 
         self.i1 = None          #i1 is used as a temporary variable
         self.cl = False         #Continue looping flag
         self.screen = mss()
         self.monitor = {'top': 0, 'left': 0, 'width': self.width,
                         'height': self.height}
-         
+
+        # If the latest screen was polled
+        self.screen_polled = False
+
     #Get's the latest image of the window
     def GetScreen(self):
         while self.i0 is None:      #Screen hasn't been captured yet
             pass
         self.mut.acquire()
         s = self.i0
+        self.screen_polled = True
         self.mut.release()
         return s
 
-    def GetNewScreen(self, current):
-        s = self.GetScreen()
+    def GetNewScreen(self):
+        while(self.screen_polled):
+            pass
 
-        while(s is current):
-            s = self.GetScreen()
-
-        return s
+        return self.GetScreen()
 
     #Get's the latest image of the window along with timestamp
     def GetScreenWithTime(self):
@@ -92,5 +94,6 @@ class ScreenViewer:
             self.i1 = self.GetScreenImg()
             self.mut.acquire()
             self.i0 = self.i1               #Update the latest image in a thread safe way
+            self.screen_polled = False
             self.its = time.time()
             self.mut.release()
