@@ -94,6 +94,12 @@ class Model(nn.Module):
         # Return a numpy array of the losses
         return loss.detach().numpy()
 
+    def reset_hidden_state(self):
+        """
+        Resets the hidden state for the LSTM
+        """
+        self.lstm.reset_hidden()
+
     def save(self, save_path):
         """
         Saves the model at the given save path

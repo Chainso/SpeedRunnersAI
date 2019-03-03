@@ -7,6 +7,9 @@ def train_model(model, data_handler, epochs, batch_size, cuda, save_path):
 
     states = data_handler.get_states()
     for epoch in range(epochs):
+        # Reset the hidden state
+        model.reset_hidden_state()
+
         # The average loss of this epoch
         avg_loss = 0
 
@@ -20,7 +23,7 @@ def train_model(model, data_handler, epochs, batch_size, cuda, save_path):
                                                         len(data_handler))
 
         # Print the average loss
-        print(avg_loss)
+        print("Epoch ", epoch + 1, ": loss", avg_loss)
 
         # Save the model
         model.save(save_path + "/model-" + str(epoch + 1) + ".torch")
