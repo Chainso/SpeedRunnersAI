@@ -1,5 +1,13 @@
 import torch.nn as nn
 
+class GaussianMixtureModel(nn.Module):
+    def __init__(self, num_mixture):
+        """
+        A gaussian mixture model (computes the means and log standard
+        deviations)
+        """
+        self.num_mixture = num_mixture
+
 class MultiCategoricalDistribution(nn.Module):
     def __init__(self, num_inputs, num_outputs):
         """
@@ -13,6 +21,9 @@ class MultiCategoricalDistribution(nn.Module):
 
         # The layer for the distribution
         self.output = nn.Linear(num_inputs, num_outputs)
+
+        # The loss function
+        self.loss_func = nn.BCEWithLogitsLoss()
 
     def forward(self, inp):
         """
@@ -34,11 +45,8 @@ class MultiCategoricalDistribution(nn.Module):
         inp : The input
         out : The target output
         """
-        # Get the loss function
-        loss_func = nn.BCEWithLogitsLoss()
-
         # Get the predicted output
         pred_out = self(inp)
 
         # Calculate the loss
-        return loss_func(pred_out, out)
+        return self.loss_func(pred_out, out)
