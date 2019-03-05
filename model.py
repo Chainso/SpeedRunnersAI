@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from vae import VAE
-from distributions import MultiCategoricalDistribution
+from distributions import MultiCategoricalDistribution, TanhGaussianMixtureModel
 from utils import LSTM
 
 class Model(nn.Module):
@@ -24,7 +24,8 @@ class Model(nn.Module):
         self.lstm = LSTM(1, self.enc_size, self.enc_size, 3, dropout = 0.3)
 
         # Get the multi-categorical distribution
-        self.action = MultiCategoricalDistribution(self.enc_size, 6)
+        #self.action = MultiCategoricalDistribution(self.enc_size, 6)
+        self.action = TanhGaussianMixtureModel(self.enc_size, 6)
 
         # The optimizer for the model
         self.optim = torch.optim.Adam(self.parameters(), lr = 1e-3)
@@ -45,10 +46,11 @@ class Model(nn.Module):
         lstm = lstm.view(lstm.size()[0], lstm.size()[-1])
 
         # Get the actions
-        actions = self.action.distribution(lstm)
+        #action = self.action.distribution(lstm)
+        action = self.action.mixture(lstm)
 
         # Round the values
-        return actions
+        return action
 
     def step(self, inp):
         """
@@ -56,7 +58,8 @@ class Model(nn.Module):
 
         inp : The input images to get the actions for
         """
-        return self(inp).detach().numpy()[0]
+        return self(inp)[0].detach().numpy()
+        #return self(inp).detach().numpy()[0]
 
     def calculate_loss(self, inp, actions):
         """
