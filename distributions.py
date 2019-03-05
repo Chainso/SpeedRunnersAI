@@ -23,7 +23,10 @@ class MultiCategoricalDistribution(nn.Module):
         self.output = nn.Linear(num_inputs, num_outputs)
 
         # The loss function
-        self.loss_func = nn.BCEWithLogitsLoss()
+        #self.loss_func = nn.BCEWithLogitsLoss()
+
+        # Temporary for tanh
+        self.loss_func = nn.MSELoss()
 
     def forward(self, inp):
         """
@@ -36,7 +39,9 @@ class MultiCategoricalDistribution(nn.Module):
         Returns the probability distribution for the given inputs, which is
         the raw distribution with an additional sigmoid layer
         """
-        return nn.Sigmoid()(self(inp))
+        # Temporary for tanh
+        return nn.Tanh()(self(inp))
+        #return nn.Sigmoid()(self(inp))
 
     def calculate_loss(self, inp, out):
         """
@@ -46,7 +51,10 @@ class MultiCategoricalDistribution(nn.Module):
         out : The target output
         """
         # Get the predicted output
-        pred_out = self(inp)
+        #pred_out = self(inp)
+
+        # Temporary for tanh
+        pred_out = self.distribution(inp)
 
         # Calculate the loss
         return self.loss_func(pred_out, out)
