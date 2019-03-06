@@ -186,7 +186,7 @@ class Recorder(PyKeyboardEvent):
         config.read("config.ini")
 
         return (config["Recording"], config["Window Size"],
-                config["SpeedRunners Config"])
+                config["speedrunners Config"])
 
 if(__name__ == "__main__"):
     # Make the keyboard listener

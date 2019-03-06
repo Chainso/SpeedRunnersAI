@@ -5,7 +5,7 @@ from configparser import ConfigParser
 class Actor():
     def __init__(self):
         """
-        Creates an actor for the game SpeedRunners
+        Creates an actor for the game speedrunners
         """
         # Get the keyboard
         self.keyboard = PyKeyboard()
@@ -112,7 +112,7 @@ class Actor():
         # Read the config file, make sure not to re-name
         config.read("config.ini")
 
-        return config["SpeedRunners Config"]
+        return config["speedrunners Config"]
 
     def release_keys(self):
         """
@@ -120,3 +120,9 @@ class Actor():
         """
         for key in self.action_values:
             self.stop_action(key, total_reset = True)
+
+    def num_actions(self):
+        """
+        Returns the number of actions the actor can take.
+        """
+        return len(self.action_values)

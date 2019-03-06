@@ -5,8 +5,7 @@ from pykeyboard import PyKeyboardEvent
 from threading import Thread
 
 from model import Model
-from screen_viewer import ScreenViewer
-from actor import Actor
+from speedrunners import SpeedRunnersEnv
 from time import time
 
 class ModelRunner(PyKeyboardEvent):
@@ -50,7 +49,20 @@ class ModelRunner(PyKeyboardEvent):
                            int(window_size["HEIGHT"]),
                            int(window_size["DEPTH"]))
 
+        self.sr_game = SpeedRunnersEnv(300, res_screen_size)
         self.sv = ScreenViewer(game_screen, res_screen_size)
+
+    def _step(self):
+        """
+        Takes a single action into the environment.
+        """
+        # Get the state and current act
+        state = self.sv.GetNewScreen()
+        state = torch.FloatTensor([state]).permute(0, 3, 1, 2)
+        state = state.to(self.model.device)
+
+        action = self.model.step(state)
+        self.actor.act(action)
 
     def _loop_listening(self):
         """
@@ -59,13 +71,7 @@ class ModelRunner(PyKeyboardEvent):
         while(self.listening):
             # Record the keys and game frames while recording is enabled
             while(self.playing):
-                # Get the state and current act
-                state = self.sv.GetNewScreen()
-                state = torch.FloatTensor([state]).permute(0, 3, 1, 2)
-                state = state.to(self.model.device)
-
-                action = self.model.step(state)
-                self.actor.act(action)
+                self._step()
 
     def tap(self, keycode, character, press):
         """
@@ -158,7 +164,7 @@ def run_model(model, screen_viewer, actor, load_path, cuda):
         config.read("config.ini")
     
         return (config["Window Size"], config["Playing"],
-                config["SpeedRunners Config"])
+                config["speedrunners Config"])
 
 if(__name__ == "__main__"):
     load_path = "./Trained Models/model-15.torch"
