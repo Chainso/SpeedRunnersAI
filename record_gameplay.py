@@ -122,7 +122,7 @@ class Recorder(PyKeyboardEvent):
                 self.close_program()
             # Check for left key as well
             elif(character == self.speedrunners["LEFT"]):
-                self.actions["direction"] = -1
+                self.actions["direction"] = 0
             elif(character == self.speedrunners["RIGHT"]):
                 self.actions["direction"] = 1
             # Otherwise map the key to the action
@@ -132,7 +132,7 @@ class Recorder(PyKeyboardEvent):
         elif(not press and character is not self.speedrunners["LEFT"]
              and character is not self.speedrunners["RIGHT"]
              and character in self.actions):
-            self.actions[character] = -1
+            self.actions[character] = 0
 
     def start_recording(self):
         """

@@ -14,12 +14,12 @@ class Actor():
         self.speedrunners = self.read_config()
 
         # The current values of the actions and the corresponding function
-        self.action_values = [(self.speedrunners["JUMP"], -1),
-                              (self.speedrunners["GRAPPLE"], -1),
-                              (self.speedrunners["ITEM"], -1),
-                              (self.speedrunners["BOOST"], -1),
-                              (self.speedrunners["SLIDE"], -1),
-                              ("direction", 0)]
+        self.action_values = [(self.speedrunners["JUMP"], 0),
+                              (self.speedrunners["GRAPPLE"], 0),
+                              (self.speedrunners["ITEM"], 0),
+                              (self.speedrunners["BOOST"], 0),
+                              (self.speedrunners["SLIDE"], 0),
+                              ("direction", 0.5)]
         self.action_values = OrderedDict(self.action_values)
         self.action_values_items = list(self.action_values.items())
 
@@ -49,7 +49,7 @@ class Actor():
         value : The value of the action, negative to stop, positive to perform.
         """
         # Check the value
-        if(value < 0):
+        if(value < 0.5):
             self.stop_action(action)
         else:
             self.single_action(action)
@@ -64,7 +64,7 @@ class Actor():
         value = self.action_values[action]
 
         # Check if the action is already down
-        if(value == -1):
+        if(value != 1):
             # Press the key corresponding to the action and set the value of it
             # Make sure to stop left if starting right and vice versa
             if(action == "direction"):
@@ -86,20 +86,21 @@ class Actor():
         value = self.action_values[action]
 
         # Check if the action is already down
-        if(value == 1):
+        if(value != 0):
+            # Check if left is pushed down and release if total reset
+            if(action == "direction" and total_reset):
+                self.keyboard.release_key(self.speedrunners["LEFT"])
+                self.keyboard.release_key(self.speedrunners["RIGHT"])
+                self.action_values[action] = 0.5
             # Release the key corresponding to the action and set the value of
             # it
-            if(action == "direction" and not total_reset):
+            elif(action == "direction"):
                 self.keyboard.press_key(self.speedrunners["LEFT"])
                 self.keyboard.release_key(self.speedrunners["RIGHT"])
+                self.action_values[action] = 0
             else:
                 self.keyboard.release_key(action)
-            self.action_values[action] = -1
-
-        # Check if left is pushed down and release if total reset
-        elif(action == "direction" and total_reset):
-            self.keyboard.release_key(self.speedrunners["LEFT"])
-            self.keyboard.release_key(self.speedrunners["RIGHT"])
+                self.action_values[action] = 0
 
     def read_config(self):
         """

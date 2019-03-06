@@ -25,7 +25,7 @@ class Model(nn.Module):
 
         # Get the multi-categorical distribution
         #self.action = MultiCategoricalDistribution(self.enc_size, 6)
-        self.action = TanhGaussianMixtureModel(self.enc_size, 6)
+        self.action = MultiCategoricalDistribution(self.enc_size, 6)
 
         # The optimizer for the model
         self.optim = torch.optim.Adam(self.parameters(), lr = 1e-3)
@@ -58,7 +58,9 @@ class Model(nn.Module):
 
         inp : The input images to get the actions for
         """
-        return self(inp)[0].detach().numpy()
+        # Normed output
+        norm_out = (self(inp)[0] * 2) - 1
+        return normed_out.detach().numpy()
         #return self(inp).detach().numpy()[0]
 
     def calculate_loss(self, inp, actions):
