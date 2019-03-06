@@ -24,7 +24,7 @@ class Model(nn.Module):
         self.lstm = LSTM(1, self.enc_size, self.enc_size, 3, dropout = 0.3)
 
         # Get the multi-categorical distribution
-        #self.action = MultiCategoricalDistribution(self.enc_size, 6)
+        #self.action = TanhGaussianMixtureModel(self.enc_size, 6)
         self.action = MultiCategoricalDistribution(self.enc_size, 6)
 
         # The optimizer for the model
@@ -46,8 +46,8 @@ class Model(nn.Module):
         lstm = lstm.view(lstm.size()[0], lstm.size()[-1])
 
         # Get the actions
-        #action = self.action.distribution(lstm)
-        action = self.action.mixture(lstm)
+        action = self.action.distribution(lstm)
+        #action = self.action.mixture(lstm)
 
         # Round the values
         return action
@@ -60,7 +60,7 @@ class Model(nn.Module):
         """
         # Normed output
         norm_out = (self(inp)[0] * 2) - 1
-        return normed_out.detach().numpy()
+        return norm_out.detach().numpy()
         #return self(inp).detach().numpy()[0]
 
     def calculate_loss(self, inp, actions):
