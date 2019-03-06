@@ -44,7 +44,7 @@ class Recorder(PyKeyboardEvent):
                            int(window_size["HEIGHT"]),
                            int(window_size["DEPTH"]))
 
-        self.sr_game = SpeedRunnersEnv(300, game_screen, res_screen_size)
+        self.sr_game = SpeedRunnersEnv(None, game_screen, res_screen_size)
 
         # The active actions and direction, right direction by default
         # Values -1 for off, 1 for on

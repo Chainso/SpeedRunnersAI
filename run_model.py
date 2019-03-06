@@ -48,7 +48,7 @@ class ModelRunner(PyKeyboardEvent):
                            int(window_size["HEIGHT"]),
                            int(window_size["DEPTH"]))
 
-        self.sr_game = SpeedRunnersEnv(300, game_screen, res_screen_size)
+        self.sr_game = SpeedRunnersEnv(None, game_screen, res_screen_size)
         self.sr_game.reset()
 
     def _step(self):
