@@ -23,7 +23,6 @@ class ModelRunner(PyKeyboardEvent):
 
         # The model to use
         self.model = model
-        self.actor = Actor()
 
         # If the program is currently running
         self.playing = False
@@ -49,15 +48,15 @@ class ModelRunner(PyKeyboardEvent):
                            int(window_size["HEIGHT"]),
                            int(window_size["DEPTH"]))
 
-        self.sr_game = SpeedRunnersEnv(300, res_screen_size)
-        self.sv = ScreenViewer(game_screen, res_screen_size)
+        self.sr_game = SpeedRunnersEnv(300, game_screen, res_screen_size)
+        self.sr_game.reset()
 
     def _step(self):
         """
         Takes a single action into the environment.
         """
         # Get the state and current act
-        state = self.sv.GetNewScreen()
+        state = self.sr_game.state
         state = torch.FloatTensor([state]).permute(0, 3, 1, 2)
         state = state.to(self.model.device)
 
@@ -104,9 +103,6 @@ class ModelRunner(PyKeyboardEvent):
             loop_listening = Thread(target = self._loop_listening)
             loop_listening.start()
 
-            # Start recording the screen
-            self.sv.Start()
-
     def pause_playing(self):
         """
         Will cause the program to stop recording
@@ -114,7 +110,6 @@ class ModelRunner(PyKeyboardEvent):
         if(self.recording):
             print("Playing paused")
             self.playing = False
-            self.sv.Stop()
 
     def close_program(self):
         """
@@ -124,7 +119,7 @@ class ModelRunner(PyKeyboardEvent):
             print("Finished playing")
             self.playing = False
             self.listening = False
-            self.sv.Stop()
+            self.sr_game.stop()
 
         self.stop()
 

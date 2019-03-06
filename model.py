@@ -6,11 +6,13 @@ from distributions import MultiCategoricalDistribution, TanhGaussianMixtureModel
 from utils import LSTM
 
 class Model(nn.Module):
-    def __init__(self):
+    def __init__(self, device = "cpu"):
         """
-        Creates the model to be used by the bot
+        Creates the model to be used by the bot on the device given.
         """
         nn.Module.__init__(self)
+
+        self._device = torch.device(device)
 
         # Set the encoded size and get the decoder input channels and dist shape
         self.enc_size = 128
@@ -29,6 +31,13 @@ class Model(nn.Module):
 
         # The optimizer for the model
         self.optim = torch.optim.Adam(self.parameters(), lr = 1e-3)
+
+    @property
+    def device(self):
+        """
+        Returns the device the model is on.
+        """
+        return self._device
 
     def forward(self, inp):
         """

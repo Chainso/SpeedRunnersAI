@@ -1,12 +1,9 @@
 from model import Model
 from hdf5_handler import HDF5Handler
 
-def train_model(model, data_handler, epochs, batch_size, cuda, save_path):
-    if(cuda):
-        model = model.cuda()
-
+def train_model(model, data_handler, epochs, batch_size, save_path):
     states = data_handler.get_states()
-    for epoch in range(epochs):
+    for epoch in range(1, epochs + 1):
         # Reset the hidden state
         model.reset_hidden_state()
 
@@ -23,19 +20,22 @@ def train_model(model, data_handler, epochs, batch_size, cuda, save_path):
                                                         len(data_handler))
 
         # Print the average loss
-        print("Epoch ", epoch + 1, ": loss", avg_loss)
+        print("Epoch ", epoch, ": loss", avg_loss)
 
         # Save the model
-        model.save(save_path + "/model-" + str(epoch + 1) + ".torch")
+        model.save(save_path + "/model-" + str(epoch) + ".torch")
 
 if(__name__ == "__main__"):
-    model = Model()
+    cuda = False
+    device = "cuda" if cuda else "cpu"
+
+    model = Model(device)
     data_handler = HDF5Handler("r+", 1)
 
     epochs = 15
     batch_size = 69
-    cuda = False
+
     save_path = "./Trained Models"
     load_path = save_path + "model-15.torch"
     model.load(load_path)
-    train_model(model, data_handler, epochs, batch_size, cuda, save_path)
+    train_model(model, data_handler, epochs, batch_size, save_path)
