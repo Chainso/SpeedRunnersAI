@@ -103,6 +103,7 @@ class ModelRunner(PyKeyboardEvent):
             loop_listening = Thread(target = self._loop_listening)
             loop_listening.start()
 
+            self.sr_game.start()
     def pause_playing(self):
         """
         Will cause the program to stop recording

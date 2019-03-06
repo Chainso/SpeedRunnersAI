@@ -1,7 +1,7 @@
 import numpy as np
 
 from hdf5_handler import HDF5Handler
-from screen_viewer import ScreenViewer
+from speedrunners import SpeedRunnersEnv
 
 from collections import OrderedDict
 from threading import Thread
@@ -44,15 +44,15 @@ class Recorder(PyKeyboardEvent):
                            int(window_size["HEIGHT"]),
                            int(window_size["DEPTH"]))
 
-        self.sv = ScreenViewer(game_screen, res_screen_size)
+        self.sr_game = SpeedRunnersEnv(300, game_screen, res_screen_size)
 
         # The active actions and direction, right direction by default
         # Values -1 for off, 1 for on
-        self.actions = [(self.speedrunners["JUMP"], -1),
-                        (self.speedrunners["GRAPPLE"], -1),
-                        (self.speedrunners["ITEM"], -1),
-                        (self.speedrunners["BOOST"], -1),
-                        (self.speedrunners["SLIDE"], -1),
+        self.actions = [(self.speedrunners["JUMP"], 0),
+                        (self.speedrunners["GRAPPLE"], 0),
+                        (self.speedrunners["ITEM"], 0),
+                        (self.speedrunners["BOOST"], 0),
+                        (self.speedrunners["SLIDE"], 0),
                         ("direction", 1)]
         self.actions = OrderedDict(self.actions) 
 
@@ -71,7 +71,7 @@ class Recorder(PyKeyboardEvent):
             # Record the keys and game frames while recording is enabled
             while(self.recording):
                 # Get the state and current action
-                state = self.sv.GetNewScreen()
+                state = self.sr_game.GetNewScreen()
                 action = [self.actions[button] for button in self.actions]
 
                 # Append to the list of states and actions
@@ -151,7 +151,7 @@ class Recorder(PyKeyboardEvent):
             loop_listening.start()
 
             # Start recording the screen
-            self.sv.Start()
+            self.sr_game.start()
 
     def stop_recording(self):
         """
@@ -160,7 +160,7 @@ class Recorder(PyKeyboardEvent):
         if(self.recording):
             print("Recording paused")
             self.recording = False
-            self.sv.Stop()
+            self.sr_game.Stop()
 
     def close_program(self):
         """
@@ -170,7 +170,7 @@ class Recorder(PyKeyboardEvent):
             print("Recording stopped")
             self.recording = False
             self.listening = False
-            self.sv.Stop()
+            self.sr_game.stop()
 
         self.data_handler.close()
         self.stop()
