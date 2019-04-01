@@ -1,6 +1,6 @@
 import numpy as np
 
-from hdf5_handler import HDF5Handler
+from hdf5_handler2 import HDF5Handler
 from speedrunners import SpeedRunnersEnv
 
 from collections import OrderedDict
@@ -73,7 +73,8 @@ class Recorder(PyKeyboardEvent):
             # Record the keys and game frames while recording is enabled
             while(self.recording):
                 # Get the state and current action
-                state = self.sr_game.GetNewScreen()
+                state = self.sr_game.sv.GetNewScreen()
+                self.sr_game.sv.set_polled()
                 action = [self.actions[button] for button in self.actions]
 
                 # Append to the list of states and actions
@@ -88,7 +89,7 @@ class Recorder(PyKeyboardEvent):
                     states = np.stack(states)
                     actions = np.stack(actions)
 
-                    # Create a thread to save the data
+                    # Create a thread to save the datajjp
                     saver = Thread(target = self.data_handler.add,
                                    args = (states, actions))
                     saver.start()
@@ -155,7 +156,7 @@ class Recorder(PyKeyboardEvent):
         if(self.recording):
             print("Recording paused")
             self.recording = False
-            self.sr_game.Stop()
+            self.sr_game.pause()
 
     def close_program(self):
         """
@@ -181,7 +182,7 @@ class Recorder(PyKeyboardEvent):
         config.read("config.ini")
 
         return (config["Recording"], config["Window Size"],
-                config["speedrunners Config"])
+                config["SpeedRunners Config"])
 
 if(__name__ == "__main__"):
     # Make the keyboard listener

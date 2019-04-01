@@ -1,7 +1,8 @@
 import numpy as np
 
-import win32api
+#import win32api
 import psutil
+"""
 from ctypes import *
 from ctypes.wintypes import *
 
@@ -16,8 +17,10 @@ class MODULEENTRY32(Structure):
                 ( 'hModule' , HMODULE ) ,
                 ( 'szModule' , c_char * 256 ),
                 ( 'szExePath' , c_char * 260 ) ]
-
+"""
 class MemoryReader():
+    pass
+"""
     # Open the process for memory reading
     CreateToolhelp32Snapshot= windll.kernel32.CreateToolhelp32Snapshot
     Process32First = windll.kernel32.Process32First
@@ -91,3 +94,4 @@ class MemoryReader():
 
     def end_session(self):
         return win32api.GetAsyncKeyState(self._end_session_key)
+"""

@@ -1,9 +1,20 @@
 from model2 import Model2
 from hdf5_handler import HDF5Handler
+import cv2
 
 def train_model(model, data_handler, epochs, batch_size, save_path):
     model = model.train()
-    states = data_handler.get_states()
+
+    test_states = data_handler.get_states(100, 200, cuda)
+    test_states = test_states.permute(0, 2, 3, 1).cpu().numpy()
+
+    for j in range(len(test_states)):
+        print(test_states[j].shape)
+        cv2.imshow("test", test_states[j])
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+    return 0
     for epoch in range(1, epochs + 1):
         # Reset the hidden state
         model.reset_hidden_state()
@@ -36,11 +47,12 @@ if(__name__ == "__main__"):
     act_n = 7
     il_weight = 1.0
     model_args = (state_space, act_n, il_weight, device)
-    model = Model2(*model_args)
+    model = Model2(*model_args).to(torch.device(device))
+
     data_handler = HDF5Handler("r+", 1)
     print(len(data_handler))    
     epochs = 100
-    batch_size = 20 * 15
+    batch_size = 15 * 10
 
     save_path = "./Trained Models/"
     load_path = save_path + "model2-1.torch"

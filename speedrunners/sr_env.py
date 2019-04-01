@@ -2,7 +2,7 @@ import numpy as np
 
 from speedrunners.screen_viewer import ScreenViewer
 from speedrunners.memory_reader import MemoryReader
-from speedrunners.actor import Actor
+from speedrunners.actor2 import Actor
 
 class SpeedRunnersEnv():
     # The addresses of all the values to get
@@ -14,10 +14,11 @@ class SpeedRunnersEnv():
     # The offsets of all the values to get
     offsets = {"obstacles_hit" : [0x0, 0x0, 0x1F6C, 0x8, 0x4]}
 
-    def __init__(self, max_time, window_size, res_shape):
+    def __init__(self, max_time, window_size, res_shape, read_mem = False):
         self.actor = Actor()
         self.sv = ScreenViewer(window_size, res_shape, self._screen_update_hook)
-        self.memory = MemoryReader("speedrunners.exe")
+        #self.memory = MemoryReader("speedrunners.exe") if read_mem else None
+        self.memory = None
         self.max_time = max_time
         self.num_actions = self.actor.num_actions()
 
@@ -28,7 +29,7 @@ class SpeedRunnersEnv():
         self._reached_goal = False
 
         self._last_time = 0
-        self.num_obstacles_hit = self.memory.get_obstacles_hit()
+        self.num_obstacles_hit = self._get_obstacles_hit()
 
     @property
     def state(self):
@@ -92,7 +93,9 @@ class SpeedRunnersEnv():
         """
         self.reset()
         self.sv.Stop()
-        self.memory.close_handle()
+
+        if(self.memory is not None):
+            self.memory.close_handle()
 
     def step(self, action):
         """
@@ -123,19 +126,24 @@ class SpeedRunnersEnv():
         self._reward = reward
 
     def _get_x_speed(self):
-        return self.memory.get_address(self.addresses["x_speed"], c_float)
+        return (self.memory.get_address(self.addresses["x_speed"], c_float)
+                if self.memory is not None else 0)
 
     def _get_y_speed(self):
-        return self.memory.get_address(self.addresses["y_speed"], c_float)
+        return (self.memory.get_address(self.addresses["y_speed"], c_float)
+                if self.memory is not None else 0)
 
     def _get_speed(self):
-        return np.sqrt(np.square(self.get_x_speed()) + 0.75 * np.square(self.get_y_speed()))
+        return np.sqrt(np.square(self._get_x_speed()) + 0.75 * np.square(self._get_y_speed()))
 
     def _get_current_time(self):
-        return self.memory.get_address(self.addresses["current_time"], c_float)
+        return (self.memory.get_address(self.addresses["current_time"], c_float)
+                if self.memory is not None else 0)
 
     def _get_obstacles_hit(self):
-        return self.memory.get_address(self.addresses["obstacles_hit"], ctypes.c_byte)
+        return (self.memory.get_address(self.addresses["obstacles_hit"],
+                                        ctypes.c_byte)
+                if self.memory is not None else 0)
 
     def _episode_finished(self, reset = False):
         if((self.max_time is not None

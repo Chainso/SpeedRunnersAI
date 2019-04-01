@@ -32,7 +32,7 @@ class ScreenViewer:
         """
         Sets the current screen to have been polled.
         """
-        return self.screen_polled
+        self.screen_polled = True
 
     #Get's the latest image of the window
     def GetScreen(self):
@@ -40,7 +40,6 @@ class ScreenViewer:
             pass
         self.mut.acquire()
         s = self.i0
-        self.set_polled()
         self.mut.release()
         return s
 

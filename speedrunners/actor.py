@@ -17,7 +17,7 @@ class Actor():
         self._slide = self.keyboard.down_key
         self._left = self.keyboard.left_key
         self._right = self.keyboard.right_key
-        self._boost = self.keyboard.space_key
+        self._boost = " "
 
         # All the keys being used
         self._keys = [self._jump, self._grapple, self._item, self._slide,
