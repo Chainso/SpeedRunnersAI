@@ -1,4 +1,4 @@
-from model import Model
+from model2 import Model2
 from hdf5_handler import HDF5Handler
 
 def train_model(model, data_handler, epochs, batch_size, save_path):
@@ -29,13 +29,19 @@ if(__name__ == "__main__"):
     cuda = False
     device = "cuda" if cuda else "cpu"
 
-    model = Model(device)
+    #model = Model(device)
+
+    state_space = (128, 128, 1)
+    act_n = 7
+    il_weight = 1.0
+    model_args = (state_space, act_n, il_weight, device)
+    model = Model2(*model_args)
     data_handler = HDF5Handler("r+", 1)
 
     epochs = 15
     batch_size = 69
 
     save_path = "./Trained Models"
-    load_path = save_path + "model-15.torch"
+    load_path = save_path + "model2-1.torch"
     model.load(load_path)
     train_model(model, data_handler, epochs, batch_size, save_path)
