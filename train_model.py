@@ -2,6 +2,7 @@ from model2 import Model2
 from hdf5_handler import HDF5Handler
 
 def train_model(model, data_handler, epochs, batch_size, save_path):
+    model = model.train()
     states = data_handler.get_states()
     for epoch in range(1, epochs + 1):
         # Reset the hidden state
@@ -16,8 +17,8 @@ def train_model(model, data_handler, epochs, batch_size, save_path):
             actions = data_handler.get_actions(index, index + batch_size, cuda)
 
             # Compute the losses
-            avg_loss += model.train(states, actions) * (batch_size /
-                                                        len(data_handler))
+            avg_loss += (model.train_supervised(states, actions)
+                         * (batch_size /len(data_handler)))
 
         # Print the average loss
         print("Epoch ", epoch, ": loss", avg_loss)
@@ -37,11 +38,11 @@ if(__name__ == "__main__"):
     model_args = (state_space, act_n, il_weight, device)
     model = Model2(*model_args)
     data_handler = HDF5Handler("r+", 1)
+    print(len(data_handler))    
+    epochs = 100
+    batch_size = 20 * 15
 
-    epochs = 15
-    batch_size = 69
-
-    save_path = "./Trained Models"
+    save_path = "./Trained Models/"
     load_path = save_path + "model2-1.torch"
-    model.load(load_path)
+    #model.load(load_path)
     train_model(model, data_handler, epochs, batch_size, save_path)

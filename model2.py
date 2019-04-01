@@ -15,17 +15,22 @@ class Model2(nn.Module):
                 self._conv_block(state_space[-1], 32, 5, 2, 0),
                 self._conv_block(32, 32, 3, 2, 0),
                 self._conv_block(32, 64, 3, 2, 0),
+                self._conv_block(64, 64, 3, 2, 0),
                 self._conv_block(64, 64, 3, 1, 0)
                 )
 
-        self.lstm = nn.Sequential(
-            LSTM(20, 256, 256, 2),
-            nn.Dropout(p = 0.5)
-            )
+        self.linear = nn.Sequential(
+                nn.Linear(1024, 256),
+                nn.ReLU(),
+                nn.Dropout(p = 0.5)
+                )
+
+        self.lstm = LSTM(15, 256, 256, 1)
+        self.lstm_dropout = nn.Dropout(p = 0.5)
 
         self.policy = nn.Sequential(
                 nn.Linear(256, act_n),
-                nn.Sigmoid(-1)
+                nn.Sigmoid()
                 )
 
         self.value = nn.Linear(256, 1)
@@ -35,6 +40,7 @@ class Model2(nn.Module):
     def _conv_block(self, filt_in, filt_out, kernel, stride, padding):
         return nn.Sequential(
                 nn.Conv2d(filt_in, filt_out, kernel, stride, padding),
+                nn.ReLU(),
                 nn.Dropout(p = 0.6)
                 )
 
@@ -43,10 +49,15 @@ class Model2(nn.Module):
 
     def forward(self, inp):
         conv = self.conv(inp)
-        conv = conv.view(20, -1, 256)
+        conv = conv.view(-1, 1024)
 
-        lstm = self.lstm(conv)
+        linear = self.linear(conv)
+        linear = linear.view(20, -1, 256)
+
+        print(linear.shape)
+        lstm = self.lstm(linear)
         lstm = lstm.view(-1, 256)
+        lstm = self.lstm_dropout(lstm)
 
         policy = self.policy(lstm)
 
@@ -59,10 +70,14 @@ class Model2(nn.Module):
 
     def step(self, inp):
         conv = self.conv(inp)
-        conv = conv.view(1, -1, 256)
+        conv = conv.view(-1, 1024)
 
-        lstm = self.lstm(conv)
+        linear = self.linear(conv)
+        linear = linear.view(1, -1, 256)
+
+        lstm = self.lstm(linear)
         lstm = lstm.view(-1, 256)
+        lstm = self.lstm_dropout(lstm)
 
         policy = self.policy(lstm)
 
@@ -80,18 +95,17 @@ class Model2(nn.Module):
     def train_supervised(self, states, actions):
         self.lstm.reset_hidden()
 
-        states = torch.from_numpy(states).to(self.device)
-        actions = torch.from_numpy(actions).to(self.device)
-
         new_acts, policy, value = self(states)
 
-        policy_loss = -self.il_weight * self._bernoulli_loss(policy, acts)
+        policy_loss = -self.il_weight * self._bernoulli_loss(policy, actions)
 
         policy_loss = policy_loss.mean()
 
         self.optimizer.zero_grad()
         policy_loss.backward()
         self.optimizer.step()
+
+        return policy_loss.detach().numpy()
 
     def train_reinforce(self, rollouts):
         self.lstm.reset_hidden()
@@ -111,3 +125,27 @@ class Model2(nn.Module):
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+
+        return loss.detach().numpy()
+
+    def reset_hidden_state(self):
+        """
+        Resets the hidden state for the LSTM
+        """
+        self.lstm.reset_hidden()
+
+    def save(self, save_path):
+        """
+        Saves the model at the given save path
+
+        save_path : The path to save the model at
+        """
+        torch.save(self.state_dict(), save_path)
+
+    def load(self, load_path):
+        """
+        Loads the model at the given load path
+
+        load_path : The of the model to load
+        """
+        self.load_state_dict(torch.load(load_path))
