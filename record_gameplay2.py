@@ -28,6 +28,9 @@ class Recorder(PyKeyboardEvent):
         # Get the information from the config
         recording_config, window_size, self.speedrunners = self.read_config()
 
+        if(self.speedrunners["BOOST"] == ""):
+            self.speedrunners["BOOST"] = " "
+
         # Get the start, end and close key and the save interval from the
         # config
         self.start_key = recording_config["START_KEY"].lower()
@@ -55,6 +58,7 @@ class Recorder(PyKeyboardEvent):
                         (self.speedrunners["SLIDE"], 0),
                         (self.speedrunners["LEFT"], 0),
                         (self.speedrunners["RIGHT"], 0)]
+
 
         self.actions = OrderedDict(self.actions) 
 

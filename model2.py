@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from utils import LSTM
+from utils import LSTM, GaussianNoise
 
 class Model2(nn.Module):
     def __init__(self, state_space, act_n, il_weight, device = "cpu"):
@@ -32,6 +32,8 @@ class Model2(nn.Module):
                 nn.Linear(256, act_n),
                 nn.Sigmoid()
                 )
+
+        self.noise = GaussianNoise(mean = 0, std = 0.05)
 
         self.value = nn.Linear(256, 1)
 
@@ -92,6 +94,8 @@ class Model2(nn.Module):
         return actions, policy, value
 
     def train_supervised(self, states, actions):
+        states = self.noise(states)
+
         self.lstm.reset_hidden()
 
         new_acts, policy, value = self(states)

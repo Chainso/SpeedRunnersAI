@@ -4,7 +4,7 @@ from configparser import ConfigParser
 from pykeyboard import PyKeyboardEvent
 from threading import Thread
 
-from model import Model
+from model2 import Model2
 from speedrunners import SpeedRunnersEnv
 from time import time
 
@@ -70,7 +70,15 @@ class ModelRunner(PyKeyboardEvent):
         while(self.listening):
             # Record the keys and game frames while recording is enabled
             while(self.playing):
-                self._step()
+                # Get the state and current action
+                state = self.sr_game.sv.GetNewScreen()
+                state = torch.FloatTensor([state]).to(self.model.device).permute(0, 3, 2, 1)
+                self.sr_game.sv.set_polled()
+
+                action, policy, value = self.model.step(state)
+
+
+                self.sr_game.step(action)
 
     def tap(self, keycode, character, press):
         """
@@ -78,11 +86,11 @@ class ModelRunner(PyKeyboardEvent):
         """
         if(press):
             # Start recording on the recording key press
-            if(character == self.start_key and not self.recording):
-                self.start_recording()
+            if(character == self.start_key and not self.playing):
+                self.resume_playing()
             # Stop recording on the recording key press
-            elif(character == self.end_key and self.recording):
-                self.stop_recording()   
+            elif(character == self.end_key and self.playing):
+                self.pause_playing()
             # Close the program on the close key press
             elif(character == self.close_key):
                 self.close_program()
@@ -91,7 +99,7 @@ class ModelRunner(PyKeyboardEvent):
         """
         Will cause the program to start recording.
         """
-        if(not self.recording):
+        if(not self.playing):
             print("Playing resumed")
             self.playing = True
 
@@ -104,11 +112,12 @@ class ModelRunner(PyKeyboardEvent):
             loop_listening.start()
 
             self.sr_game.start()
+
     def pause_playing(self):
         """
         Will cause the program to stop recording
         """
-        if(self.recording):
+        if(self.playing):
             print("Playing paused")
             self.playing = False
 
@@ -123,6 +132,19 @@ class ModelRunner(PyKeyboardEvent):
             self.sr_game.stop()
 
         self.stop()
+
+    def read_config(self):
+        """
+        Reads the config file to obtain the settings for the recorder, the
+        window size for the training data and the game bindings
+        """
+        config = ConfigParser()
+    
+        # Read the config file, make sure not to re-name
+        config.read("config.ini")
+
+        return (config["Window Size"], config["Playing"],
+                config["SpeedRunners Config"])
 
 def run_model(model, screen_viewer, actor, load_path, cuda):
     if(cuda):
@@ -163,12 +185,18 @@ def run_model(model, screen_viewer, actor, load_path, cuda):
                 config["speedrunners Config"])
 
 if(__name__ == "__main__"):
-    load_path = "./Trained Models/model-15.torch"
+    cuda = False
+    device = "cuda" if cuda else "cpu"
 
-    model = Model()
-    model.load(load_path)
+    load_path = "./Trained Models/model-100.torch"
 
-    model_runner = ModelRunner()
+    state_space = (128, 128, 1)
+    act_n = 7
+    il_weight = 1.0
+    model_args = (state_space, act_n, il_weight, device)
+    model = Model2(*model_args).to(torch.device(device))
+
+    model_runner = ModelRunner(model)
     model_runner.run()
 
 """
