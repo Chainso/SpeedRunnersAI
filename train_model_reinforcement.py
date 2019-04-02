@@ -214,6 +214,11 @@ def train_model(model, data_handler, epochs, batch_size, save_path):
         model.save(save_path + "/model-" + str(epoch) + ".torch")
 
 if(__name__ == "__main__"):
+    """
+    TODO
+
+    Use the il_weight to mix reinforcement learning with imitation learning
+    """
     cuda = False
     device = "cuda" if cuda else "cpu"
 
