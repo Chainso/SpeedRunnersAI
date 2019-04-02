@@ -36,16 +36,17 @@ if(__name__ == "__main__"):
 
     state_space = (128, 128, 1)
     act_n = 7
+    batch_size = 10
     il_weight = 1.0
-    model_args = (state_space, act_n, il_weight, device)
+    model_args = (state_space, act_n, batch_size, il_weight, device)
     model = Model2(*model_args).to(torch.device(device))
 
     data_handler = HDF5Handler("r+", 1)
-    print(len(data_handler))    
+    print(len(data_handler))
     epochs = 100
-    batch_size = 15 * 10
+    full_rollout_length = batch_size * 15
 
     save_path = "./Trained Models/"
     load_path = save_path + "model2-1.torch"
     #model.load(load_path)
-    train_model(model, data_handler, epochs, batch_size, save_path)
+    train_model(model, data_handler, epochs, full_rollout_length, save_path)

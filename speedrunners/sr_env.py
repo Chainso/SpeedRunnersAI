@@ -104,6 +104,8 @@ class SpeedRunnersEnv():
         self.sv.set_polled()
         self.actor.act(action)
         self._state = self.sv.GetNewScreen()
+        # Dont forget to calculate rewards
+        self._episode_finished(False)
 
         return self.state, self.reward, self.terminal
 

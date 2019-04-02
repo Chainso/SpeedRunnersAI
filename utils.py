@@ -1,6 +1,18 @@
 import torch
 import torch.nn as nn
 
+def discount(rewards, decay):
+    ret = 0
+    returns = []
+    for reward in rewards[::-1]:
+        ret = reward + decay * ret
+        returns.append(ret)
+
+    return ret[::-1]
+
+def normalize(vector, epsilon):
+    return (vector - vector.mean()) / (vector.std() + epsilon)
+
 class GaussianNoise(nn.Module):
     def __init__(self, mean=0, std=0.05):
         nn.Module.__init__(self)

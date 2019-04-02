@@ -1,28 +1,41 @@
 import torch
 
+from threading import Thread
 from configparser import ConfigParser
 from pykeyboard import PyKeyboardEvent
-from threading import Thread
 
 from model2 import Model2
+from hdf5_handler import HDF5Handler
 from speedrunners import SpeedRunnersEnv
-from time import time
+from utils import discount, normalize
 
-class ModelRunner(PyKeyboardEvent):
+class ModelTrainer(PyKeyboardEvent):
     """
     A keyboard event listener to start and stop the recording.
     """
-    def __init__(self, model):
+    def __init__(self, model, episodes, batch_size, decay, save_interval,
+                 save_path):
         """
         Will play the game using the given model.
 
         Args:
-            model: The model to use to play with.
+            model: The model to train.
+            episodes: The number episodes to train for.
+            batch_size: The batch size of the training inputs.
+            decay: The decay of the n_step return.
+            save_interal: The number of episodes between each save
+            save_path: The path to save the model to
         """
         PyKeyboardEvent.__init__(self)
 
         # The model to use
         self.model = model
+
+        self.episodes = episodes
+        self.batch_size = batch_size
+        self.decay = decay
+        self.save_interval = save_interval
+        self.save_path = save_path
 
         # If the program is currently running
         self.playing = False
@@ -48,7 +61,7 @@ class ModelRunner(PyKeyboardEvent):
                            int(window_size["HEIGHT"]),
                            int(window_size["DEPTH"]))
 
-        self.sr_game = SpeedRunnersEnv(None, game_screen, res_screen_size)
+        self.sr_game = SpeedRunnersEnv(120, game_screen, res_screen_size)
         self.sr_game.reset()
 
     def _step(self):
@@ -70,14 +83,44 @@ class ModelRunner(PyKeyboardEvent):
         while(self.listening):
             # Record the keys and game frames while recording is enabled
             while(self.playing):
-                # Get the state and current action
-                state = self.sr_game.sv.GetNewScreen()
-                state = torch.FloatTensor([state]).to(self.model.device).permute(0, 3, 2, 1)
-                self.sr_game.sv.set_polled()
-
-                action, policy, value = self.model.step(state)
-
-                self.sr_game.step(action)
+                episode = 1
+                while(episode <= self.episodes):
+                    states = []
+                    actions = []
+                    rewards = []
+                    values = []
+    
+                    state = self.sr_game.reset()
+                    terminal = False
+    
+                    i = 0;
+                    while(i < self.batch_size and self.playing and not terminal):
+                        tens_state = torch.FloatTensor([state]).to(self.model.device).permute(0, 3, 2, 1)
+                        self.sr_game.sv.set_polled()
+        
+                        action, policy, value = self.model.step(tens_state)
+        
+                        next_state, reward, terminal, info = self.sr_game.step(action)
+        
+                        states.append(state)
+                        actions.append(action)
+                        rewards.append(reward)
+                        values.append(value)
+    
+                        state = next_state
+    
+                        i += 1
+    
+                    if(len(states) == self.batch_size):
+                        returns = discount(rewards, decay)
+                        advantages = returns - values
+                        advantages = normalize(advantages, 1e-5)
+    
+                        self.model.train_reinforce([states, actions, rewards,
+                                                   advantages])
+    
+                    if(episode % self.save_interval == 0):
+                        self.model.save(self.save_path)
 
     def tap(self, keycode, character, press):
         """
@@ -145,11 +188,36 @@ class ModelRunner(PyKeyboardEvent):
         return (config["Window Size"], config["Playing"],
                 config["SpeedRunners Config"])
 
+def train_model(model, data_handler, epochs, batch_size, save_path):
+    model = model.train()
+
+    for epoch in range(1, epochs + 1):
+        # Reset the hidden state
+        model.reset_hidden_state()
+
+        # The average loss of this epoch
+        avg_loss = 0
+
+        for index in range(0, len(data_handler), batch_size):
+            # Get the next batch of states and actions
+            states = data_handler.get_states(index, index + batch_size, cuda)
+            actions = data_handler.get_actions(index, index + batch_size, cuda)
+
+            # Compute the losses
+            avg_loss += (model.train_supervised(states, actions)
+                         * (batch_size /len(data_handler)))
+
+        # Print the average loss
+        print("Epoch ", epoch, ": loss", avg_loss)
+
+        # Save the model
+        model.save(save_path + "/model-" + str(epoch) + ".torch")
+
 if(__name__ == "__main__"):
     cuda = False
     device = "cuda" if cuda else "cpu"
 
-    load_path = "./Trained Models/model-100.torch"
+    #model = Model(device)
 
     state_space = (128, 128, 1)
     act_n = 7
@@ -158,25 +226,17 @@ if(__name__ == "__main__"):
     model_args = (state_space, act_n, batch_size, il_weight, device)
     model = Model2(*model_args).to(torch.device(device))
 
-    model_runner = ModelRunner(model)
-    model_runner.start()
+    data_handler = HDF5Handler("r+", 1)
+    print(len(data_handler))
+    episodes = 100
+    full_rollout_length = batch_size * 15
+    decay = 0.99
+    save_interval = 1
 
-"""
-if(__name__ == "__main__"):
-    model = Model()
-
-    window_size, playing_config, speedrunners_config = read_config()
-
-    window_size = (int(window_size["WIDTH"]), int(window_size["HEIGHT"]),
-                   int(window_size["DEPTH"]))
-
-    speedrunners_size = (int(speedrunners_config["WIDTH"]),
-                         int(speedrunners_config["HEIGHT"]))
-    screen_viewer = ScreenViewer(speedrunners_size, window_size)
-
-    actor = Actor()
-    load_path = "./Trained Models/model-15.torch"
-    cuda = False
-
-    run_model(model, screen_viewer, actor, load_path, cuda)
-"""
+    save_path = "./Trained Models/"
+    load_path = save_path + "model2-1.torch"
+    #model.load(load_path)
+    #train_model(model, data_handler, episodes, full_rollout_length, save_path)
+    trainer = ModelTrainer(model, episodes, full_rollout_length, decay,
+                           save_interval, load_path)
+    trainer.run()

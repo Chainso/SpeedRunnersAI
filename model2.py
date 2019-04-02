@@ -4,11 +4,14 @@ import torch.nn as nn
 from utils import LSTM, GaussianNoise
 
 class Model2(nn.Module):
-    def __init__(self, state_space, act_n, il_weight, device = "cpu"):
+    def __init__(self, state_space, act_n, batch_size, il_weight,
+                 device = "cpu"):
         nn.Module.__init__(self)
 
         self.state_space = state_space
+        self.batch_size = batch_size
         self.il_weight = il_weight
+
         self.device = torch.device(device)
 
         self.conv = nn.Sequential(
@@ -25,7 +28,7 @@ class Model2(nn.Module):
                 nn.Dropout(p = 0.5)
                 )
 
-        self.lstm = LSTM(10, 256, 256, 1)
+        self.lstm = LSTM(self.batch_size, 256, 256, 1)
         self.lstm_dropout = nn.Dropout(p = 0.5)
 
         self.policy = nn.Sequential(
@@ -54,7 +57,7 @@ class Model2(nn.Module):
         conv = conv.view(-1, 1024)
 
         linear = self.linear(conv)
-        linear = linear.view(15, -1, 256)
+        linear = linear.view(len(inp) // self.batch_size, -1, 256)
 
         lstm = self.lstm(linear)
         lstm = lstm.view(-1, 256)
@@ -74,7 +77,7 @@ class Model2(nn.Module):
         conv = conv.view(-1, 1024)
 
         linear = self.linear(conv)
-        linear = linear.view(1, -1, 256)
+        linear = linear.view(1, 1, 256)
 
         lstm = self.lstm(linear)
         lstm = lstm.view(-1, 256)
