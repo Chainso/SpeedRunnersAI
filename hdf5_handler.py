@@ -136,7 +136,7 @@ class HDF5Handler():
 
     def sequenced_sample(self, num_samples, sample_size, cuda = False):
         """
-        Retreives a sequence of the given sample sie at random from the
+        Retreives a sequence of the given sample size at random from the
         training data
 
         num_samples : The number of sample to get

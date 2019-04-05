@@ -9,19 +9,22 @@ from hdf5_handler import HDF5Handler
 from speedrunners import SpeedRunnersEnv
 from utils import discount, normalize
 
+
 class ModelTrainer(PyKeyboardEvent):
     """
     A keyboard event listener to start and stop the recording.
     """
-    def __init__(self, model, episodes, batch_size, decay, save_interval,
-                 save_path):
+    def __init__(self, model, data_handler, episodes, batch_size,
+                 sequence_length, decay, save_interval, save_path):
         """
         Will play the game using the given model.
 
         Args:
             model: The model to train.
+            data_handler: The data handler for supervised training
             episodes: The number episodes to train for.
             batch_size: The batch size of the training inputs.
+            sequence_lengh: The length of each batch
             decay: The decay of the n_step return.
             save_interal: The number of episodes between each save
             save_path: The path to save the model to
@@ -30,9 +33,11 @@ class ModelTrainer(PyKeyboardEvent):
 
         # The model to use
         self.model = model
+        self.data_handler = data_handler
 
         self.episodes = episodes
         self.batch_size = batch_size
+        self.sequence_length = sequence_length
         self.decay = decay
         self.save_interval = save_interval
         self.save_path = save_path
@@ -62,19 +67,6 @@ class ModelTrainer(PyKeyboardEvent):
                            int(window_size["DEPTH"]))
 
         self.sr_game = SpeedRunnersEnv(120, game_screen, res_screen_size)
-        self.sr_game.reset()
-
-    def _step(self):
-        """
-        Takes a single action into the environment.
-        """
-        # Get the state and current act
-        state = self.sr_game.state
-        state = torch.FloatTensor([state]).permute(0, 3, 1, 2)
-        state = state.to(self.model.device)
-
-        action = self.model.step(state)
-        self.actor.act(action)
 
     def _loop_listening(self):
         """
@@ -98,10 +90,12 @@ class ModelTrainer(PyKeyboardEvent):
                         tens_state = torch.FloatTensor([state]).to(self.model.device).permute(0, 3, 2, 1)
                         self.sr_game.sv.set_polled()
         
-                        action, policy, value = self.model.step(tens_state)
+                        action, policy, value, rnd = self.model.step(tens_state)
         
-                        next_state, reward, terminal, info = self.sr_game.step(action)
-        
+                        next_state, reward, terminal = self.sr_game.step(action)
+
+                        reward = reward + rnd
+
                         states.append(state)
                         actions.append(action)
                         rewards.append(reward)
@@ -111,14 +105,22 @@ class ModelTrainer(PyKeyboardEvent):
     
                         i += 1
     
-                    if(len(states) == self.batch_size):
+                    if(len(states) == self.batch_size * self.sequence_length):
                         returns = discount(rewards, decay)
                         advantages = returns - values
                         advantages = normalize(advantages, 1e-5)
     
                         self.model.train_reinforce([states, actions, rewards,
                                                    advantages])
-    
+
+                        supervised = self.data_handler.sequenced_sample(
+                                                           self.batch_size,
+                                                           self.sequence_length,
+                                                           self.model.device == "cuda"
+                                                           )
+
+                        self.model.train_supervised(*supervised)
+
                     if(episode % self.save_interval == 0):
                         self.model.save(self.save_path)
 
@@ -213,6 +215,129 @@ def train_model(model, data_handler, epochs, batch_size, save_path):
         # Save the model
         model.save(save_path + "/model-" + str(epoch) + ".torch")
 
+class Trainer():
+    def __init__(self, model, data_handler, episodes, batch_size,
+             sequence_length, decay, save_interval, save_path):
+        """
+        Will play the game using the given model.
+
+        Args:
+            model: The model to train.
+            data_handler: The data handler for supervised training
+            episodes: The number episodes to train for.
+            batch_size: The batch size of the training inputs.
+            sequence_lengh: The length of each batch
+            decay: The decay of the n_step return.
+            save_interal: The number of episodes between each save
+            save_path: The path to save the model to
+        """
+        # The model to use
+        self.model = model
+        self.data_handler = data_handler
+
+        self.episodes = episodes
+        self.batch_size = batch_size
+        self.sequence_length = sequence_length
+        self.decay = decay
+        self.save_interval = save_interval
+        self.save_path = save_path
+
+        # If the program is currently running
+        self.playing = False
+
+        # If the program is listening to the keyboard
+        self.listening = False
+
+        # Get the information from the config
+        window_size, playing_config, self.speedrunners = self.read_config()
+
+        # Get the start, end and close key and the save interval from the
+        # config
+        self.start_key = playing_config["START_KEY"].lower()
+        self.end_key = playing_config["END_KEY"].lower()
+        self.close_key = playing_config["CLOSE_KEY"].lower()
+
+        # Get the game screen size
+        game_screen = (int(self.speedrunners["WIDTH"]),
+                       int(self.speedrunners["HEIGHT"]))
+
+        # Get the resized screen size from the config
+        res_screen_size = (int(window_size["WIDTH"]),
+                           int(window_size["HEIGHT"]),
+                           int(window_size["DEPTH"]))
+
+        self.sr_game = SpeedRunnersEnv(120, game_screen, res_screen_size)
+        self.sr_game.reset()
+
+    def _loop_listening(self):
+        """
+        Ensures that the program will continue listening until closure
+        """
+        while(self.listening):
+            # Record the keys and game frames while recording is enabled
+            while(self.playing):
+                episode = 1
+                while(episode <= self.episodes):
+                    states = []
+                    actions = []
+                    rewards = []
+                    values = []
+    
+                    state = self.sr_game.reset()
+                    terminal = False
+    
+                    i = 0;
+                    while(i < self.batch_size and self.playing and not terminal):
+                        tens_state = torch.FloatTensor([state]).to(self.model.device).permute(0, 3, 2, 1)
+                        self.sr_game.sv.set_polled()
+        
+                        action, policy, value, rnd = self.model.step(tens_state)
+        
+                        next_state, reward, terminal = self.sr_game.step(action)
+
+                        reward = reward + rnd
+
+                        states.append(state)
+                        actions.append(action)
+                        rewards.append(reward)
+                        values.append(value)
+    
+                        state = next_state
+    
+                        i += 1
+    
+                    if(len(states) == self.batch_size * self.sequence_length):
+                        returns = discount(rewards, decay)
+                        advantages = returns - values
+                        advantages = normalize(advantages, 1e-5)
+    
+                        self.model.train_reinforce([states, actions, rewards,
+                                                   advantages])
+
+                        supervised = self.data_handler.sequenced_sample(
+                                                           self.batch_size,
+                                                           self.sequence_length,
+                                                           self.model.device == "cuda"
+                                                           )
+
+                        self.model.train_supervised(*supervised)
+
+                    if(episode % self.save_interval == 0):
+                        self.model.save(self.save_path)
+
+    def read_config(self):
+        """
+        Reads the config file to obtain the settings for the recorder, the
+        window size for the training data and the game bindings
+        """
+        config = ConfigParser()
+    
+        # Read the config file, make sure not to re-name
+        config.read("config.ini")
+
+        return (config["Window Size"], config["Playing"],
+                config["SpeedRunners Config"])
+
 if(__name__ == "__main__"):
     """
     TODO
@@ -227,21 +352,24 @@ if(__name__ == "__main__"):
     state_space = (128, 128, 1)
     act_n = 7
     batch_size = 10
+    sequence_length = 15
     il_weight = 1.0
     model_args = (state_space, act_n, batch_size, il_weight, device)
     model = Model2(*model_args).to(torch.device(device))
 
     data_handler = HDF5Handler("r+", 1)
-    print(len(data_handler))
+    print("Data length:", len(data_handler), "samples")
     episodes = 100
-    full_rollout_length = batch_size * 15
     decay = 0.99
     save_interval = 1
 
     save_path = "./Trained Models/"
-    load_path = save_path + "model2-1.torch"
+    load_path = save_path + "mail-1.torch"
     #model.load(load_path)
     #train_model(model, data_handler, episodes, full_rollout_length, save_path)
-    trainer = ModelTrainer(model, episodes, full_rollout_length, decay,
-                           save_interval, load_path)
+    trainer = ModelTrainer(model, data_handler, episodes, batch_size,
+                           sequence_length, decay, save_interval, load_path)
     trainer.run()
+    #trainer.listening = True
+    #trainer.playing = True
+    #trainer._loop_listening()

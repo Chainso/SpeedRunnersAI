@@ -14,6 +14,9 @@ class Model2(nn.Module):
 
         self.device = torch.device(device)
 
+        self.rnd_target = self._rnd_net(state_space)
+        self.rnd = self._rnd_net(state_space)
+
         self.conv = nn.Sequential(
                 self._conv_block(state_space[-1], 32, 5, 2, 0),
                 self._conv_block(32, 32, 3, 2, 0),
@@ -42,11 +45,26 @@ class Model2(nn.Module):
 
         self.optimizer = torch.optim.Adam(self.parameters(), lr = 1e-4)
 
-    def _conv_block(self, filt_in, filt_out, kernel, stride, padding):
+    def _conv_no_dropout(self, filt_in, filt_out, kernel, stride, padding):
         return nn.Sequential(
                 nn.Conv2d(filt_in, filt_out, kernel, stride, padding),
                 nn.ReLU(),
+                )
+
+    def _conv_block(self, filt_in, filt_out, kernel, stride, padding):
+        return nn.Sequential(
+                self._conv_no_dropout(filt_in, filt_out, kernel, stride,
+                                      padding),
                 nn.Dropout(p = 0.6)
+                )
+
+    def _rnd_net(self, state_space):
+        return nn.Sequential(
+                self._conv_no_dropout(state_space[-1], 32, 5, 2, 0),
+                self._conv_no_dropout(32, 32, 3, 2, 0),
+                self._conv_no_dropout(32, 64, 3, 2, 0),
+                self._conv_no_dropout(64, 64, 3, 2, 0),
+                self._conv_no_dropout(64, 64, 3, 1, 0)
                 )
 
     def _bernoulli_loss(self, policy, actions):
@@ -94,7 +112,10 @@ class Model2(nn.Module):
         value = self.value(lstm)
         value = value.item()
 
-        return actions, policy, value
+        mse = nn.MSELoss()
+        rnd_reward = mse(self.rnd(inp), self.rnd_target(inp).detach()).item()
+
+        return actions, policy, value, rnd_reward
 
     def train_supervised(self, states, actions):
         states = self.noise(states)
@@ -126,7 +147,10 @@ class Model2(nn.Module):
 
         value_loss = nn.MSELoss()(value, rewards)
 
-        loss = policy_loss + value_loss
+        mse = nn.MSELoss()
+        rnd_reward = mse(self.rnd(states), self.rnd_target(states).detach())
+
+        loss = policy_loss + value_loss + rnd_reward
 
         self.optimizer.zero_grad()
         loss.backward()
