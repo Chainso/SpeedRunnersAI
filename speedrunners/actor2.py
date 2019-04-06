@@ -70,8 +70,17 @@ class Actor():
 
         # Check if the action is already down
         if(value != 1):
-            print(action)
-            self.keyboard.press_key(action)
+            if(action.lower() == "down"):
+                self.keyboard.press_key(self.keyboard.down_key)
+            elif(action.lower() == "left"):
+                self.keyboard.press_key(self.keyboard.left_key)
+            elif(action.lower() == "right"):
+                self.keyboard.press_key(self.keyboard.right_key)
+            elif(action.lower() == "space"):
+                self.keyboard.press_key(self.keyboard.space_key)
+            else:
+                self.keyboard.press_key(action)
+
             self.action_values[action] = 1
 
     def stop_action(self, action, total_reset = False):
@@ -87,20 +96,18 @@ class Actor():
 
         # Check if the action is already down
         if(value != 0):
+            if(action.lower() == "down"):
+                self.keyboard.release_key(self.keyboard.down_key)
+            elif(action.lower() == "left"):
+                self.keyboard.release_key(self.keyboard.left_key)
+            elif(action.lower() == "right"):
+                self.keyboard.release_key(self.keyboard.right_key)
+            elif(action.lower() == "space"):
+                self.keyboard.release_key(self.keyboard.space_key)
+            else:
                 self.keyboard.release_key(action)
-                self.action_values[action] = 0
 
-    def read_config(self):
-        """
-        Reads the config file to obtain the settings for the recorder, the
-        window size for the training data and the game bindings
-        """
-        config = ConfigParser()
-
-        # Read the config file, make sure not to re-name
-        config.read("config.ini")
-
-        return config["SpeedRunners Config"]
+            self.action_values[action] = 0
 
     def release_keys(self):
         """
@@ -114,3 +121,15 @@ class Actor():
         Returns the number of actions the actor can take.
         """
         return len(self.action_values)
+
+    def read_config(self):
+        """
+        Reads the config file to obtain the settings for the recorder, the
+        window size for the training data and the game bindings
+        """
+        config = ConfigParser()
+    
+        # Read the config file, make sure not to re-name
+        config.read("config.ini")
+
+        return config["SpeedRunners Config"]

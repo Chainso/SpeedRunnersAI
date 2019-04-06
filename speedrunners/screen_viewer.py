@@ -61,8 +61,7 @@ class ScreenViewer:
          
     # Gets the screen of the window referenced by self.hwnd
     def GetScreenImg(self):
-        sct_img = self.screen.grab(self.monitor)
-        im = Image.frombytes('RGB', sct_img.size, sct_img.rgb)
+        im = self.screen.grab(self.monitor)
         im = np.array(im)
 
         if(self.res_depth == 0 or self.res_depth == 1):
@@ -100,6 +99,7 @@ class ScreenViewer:
         Updates the screen with the new image captures. Will call the update
         hook with the new screen as the parameter if a hook is provided.
         """
+        a = 0
         #Keep updating screen until terminating
         while self.cl:
             self.i1 = self.GetScreenImg()
