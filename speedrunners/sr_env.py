@@ -93,6 +93,7 @@ class SpeedRunnersEnv():
         """
         self.reset()
         self.sv.Stop()
+        self.actor.stop()
 
         if(self.memory is not None):
             self.memory.close_handle()

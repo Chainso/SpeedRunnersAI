@@ -128,6 +128,7 @@ class ModelTrainer(PyKeyboardEvent):
         """
         Will handle the key press event to start, stop and end the program.
         """
+        print("\nReceived:", character)
         if(press):
             # Start recording on the recording key press
             if(character == self.start_key and not self.playing):
@@ -174,6 +175,7 @@ class ModelTrainer(PyKeyboardEvent):
             self.playing = False
             self.listening = False
             self.sr_game.stop()
+            self.data_handler.close()
 
         self.stop()
 

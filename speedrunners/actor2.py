@@ -116,6 +116,12 @@ class Actor():
         for key in self.action_values:
             self.stop_action(key)
 
+    def stop(self):
+        """
+        Closes the actor.
+        """
+        self.release_keys()
+
     def num_actions(self):
         """
         Returns the number of actions the actor can take.
