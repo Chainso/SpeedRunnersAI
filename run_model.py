@@ -75,7 +75,7 @@ class ModelRunner(PyKeyboardEvent):
                 state = torch.FloatTensor([state]).to(self.model.device).permute(0, 3, 2, 1)
                 self.sr_game.sv.set_polled()
 
-                action, policy, value = self.model.step(state)
+                action, policy, value, rnd_reward = self.model.step(state)
 
                 self.sr_game.step(action)
 
@@ -119,6 +119,7 @@ class ModelRunner(PyKeyboardEvent):
         if(self.playing):
             print("Playing paused")
             self.playing = False
+            self.env.pause()
 
     def close_program(self):
         """

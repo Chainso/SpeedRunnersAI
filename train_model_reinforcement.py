@@ -165,6 +165,7 @@ class ModelTrainer(PyKeyboardEvent):
         if(self.playing):
             print("Playing paused")
             self.playing = False
+            self.env.pause()
 
     def close_program(self):
         """
@@ -216,129 +217,6 @@ def train_model(model, data_handler, epochs, batch_size, save_path):
 
         # Save the model
         model.save(save_path + "/model-" + str(epoch) + ".torch")
-
-class Trainer():
-    def __init__(self, model, data_handler, episodes, batch_size,
-             sequence_length, decay, save_interval, save_path):
-        """
-        Will play the game using the given model.
-
-        Args:
-            model: The model to train.
-            data_handler: The data handler for supervised training
-            episodes: The number episodes to train for.
-            batch_size: The batch size of the training inputs.
-            sequence_lengh: The length of each batch
-            decay: The decay of the n_step return.
-            save_interal: The number of episodes between each save
-            save_path: The path to save the model to
-        """
-        # The model to use
-        self.model = model
-        self.data_handler = data_handler
-
-        self.episodes = episodes
-        self.batch_size = batch_size
-        self.sequence_length = sequence_length
-        self.decay = decay
-        self.save_interval = save_interval
-        self.save_path = save_path
-
-        # If the program is currently running
-        self.playing = False
-
-        # If the program is listening to the keyboard
-        self.listening = False
-
-        # Get the information from the config
-        window_size, playing_config, self.speedrunners = self.read_config()
-
-        # Get the start, end and close key and the save interval from the
-        # config
-        self.start_key = playing_config["START_KEY"].lower()
-        self.end_key = playing_config["END_KEY"].lower()
-        self.close_key = playing_config["CLOSE_KEY"].lower()
-
-        # Get the game screen size
-        game_screen = (int(self.speedrunners["WIDTH"]),
-                       int(self.speedrunners["HEIGHT"]))
-
-        # Get the resized screen size from the config
-        res_screen_size = (int(window_size["WIDTH"]),
-                           int(window_size["HEIGHT"]),
-                           int(window_size["DEPTH"]))
-
-        self.sr_game = SpeedRunnersEnv(120, game_screen, res_screen_size)
-        self.sr_game.reset()
-
-    def _loop_listening(self):
-        """
-        Ensures that the program will continue listening until closure
-        """
-        while(self.listening):
-            # Record the keys and game frames while recording is enabled
-            while(self.playing):
-                episode = 1
-                while(episode <= self.episodes):
-                    states = []
-                    actions = []
-                    rewards = []
-                    values = []
-    
-                    state = self.sr_game.reset()
-                    terminal = False
-    
-                    i = 0;
-                    while(i < self.batch_size and self.playing and not terminal):
-                        tens_state = torch.FloatTensor([state]).to(self.model.device).permute(0, 3, 2, 1)
-                        self.sr_game.sv.set_polled()
-        
-                        action, policy, value, rnd = self.model.step(tens_state)
-        
-                        next_state, reward, terminal = self.sr_game.step(action)
-
-                        reward = reward + rnd
-
-                        states.append(state)
-                        actions.append(action)
-                        rewards.append(reward)
-                        values.append(value)
-    
-                        state = next_state
-    
-                        i += 1
-    
-                    if(len(states) == self.batch_size * self.sequence_length):
-                        returns = discount(rewards, decay)
-                        advantages = returns - values
-                        advantages = normalize(advantages, 1e-5)
-    
-                        self.model.train_reinforce([states, actions, rewards,
-                                                   advantages])
-
-                        supervised = self.data_handler.sequenced_sample(
-                                                           self.batch_size,
-                                                           self.sequence_length,
-                                                           self.model.device == "cuda"
-                                                           )
-
-                        self.model.train_supervised(*supervised)
-
-                    if(episode % self.save_interval == 0):
-                        self.model.save(self.save_path)
-
-    def read_config(self):
-        """
-        Reads the config file to obtain the settings for the recorder, the
-        window size for the training data and the game bindings
-        """
-        config = ConfigParser()
-    
-        # Read the config file, make sure not to re-name
-        config.read("config.ini")
-
-        return (config["Window Size"], config["Playing"],
-                config["SpeedRunners Config"])
 
 if(__name__ == "__main__"):
     """
