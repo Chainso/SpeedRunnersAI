@@ -150,7 +150,7 @@ class Model2(nn.Module):
 
         rnd_loss = self.mse_loss(self.rnd(states),
                                  self.rnd_target(states).detach())
-
+        print(policy_loss, value_loss, rnd_loss)
         loss = policy_loss + value_loss + rnd_loss
         print(loss)
 

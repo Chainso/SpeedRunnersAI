@@ -81,17 +81,16 @@ class ModelTrainer(PyKeyboardEvent):
             # Record the keys and game frames while recording is enabled
             while(self.playing):
                 while(episode <= self.episodes and self.playing):
-                    states = []
-                    actions = []
-                    rewards = []
-                    values = []
-
                     state = self.sr_game.reset()
                     terminal = False
-                    i = 0
 
                     while(not terminal and self.playing):
-                        while(i < collection_length
+                        states = []
+                        actions = []
+                        rewards = []
+                        values = []
+
+                        while(len(states) < collection_length
                               and self.playing and not terminal):
                             start = time()
 
@@ -111,8 +110,6 @@ class ModelTrainer(PyKeyboardEvent):
                             rewards.append(reward)
                             values.append(value)
 
-                            i += 1
-
                             #print("Loop time:", time() - start)
 
                         if(len(states) == collection_length):
@@ -127,7 +124,7 @@ class ModelTrainer(PyKeyboardEvent):
         
                             self.model.train_reinforce([states, actions, rewards,
                                                        advantages])
-    
+                            """ Just training RND for now
                             supervised = self.data_handler.sequenced_sample(
                                                                self.batch_size,
                                                                self.sequence_length,
@@ -136,7 +133,7 @@ class ModelTrainer(PyKeyboardEvent):
                             supervised = [tens.view(-1, *tens.shape[2:])
                                           for tens in supervised]
                             self.model.train_supervised(*supervised)
-    
+                            """
                 if(episode % self.save_interval == 0):
                     self.model.save(self.save_path)
 
@@ -246,7 +243,7 @@ if(__name__ == "__main__"):
 
     state_space = (128, 128, 1)
     act_n = 7
-    batch_size = 1
+    batch_size = 10
     sequence_length = 15
     il_weight = 1.0
     model_args = (state_space, act_n, batch_size, il_weight, device)
