@@ -1,14 +1,16 @@
 import torch
 import torch.nn as nn
+import numpy as np
 
 def discount(rewards, decay):
     ret = 0
     returns = []
+
     for reward in rewards[::-1]:
         ret = reward + decay * ret
         returns.append(ret)
 
-    return ret[::-1]
+    return np.array(returns[::-1])
 
 def normalize(vector, epsilon):
     return (vector - vector.mean()) / (vector.std() + epsilon)

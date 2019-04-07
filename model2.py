@@ -43,6 +43,9 @@ class Model2(nn.Module):
 
         self.value = nn.Linear(256, 1)
 
+        self.bce_loss = nn.BCELoss(reduction = "none")
+        self.mse_loss = nn.MSELoss()
+
         self.optimizer = torch.optim.Adam(self.parameters(), lr = 1e-4)
 
     def _conv_no_dropout(self, filt_in, filt_out, kernel, stride, padding):
@@ -66,9 +69,6 @@ class Model2(nn.Module):
                 self._conv_no_dropout(64, 64, 3, 2, 0),
                 self._conv_no_dropout(64, 64, 3, 1, 0)
                 )
-
-    def _bernoulli_loss(self, policy, actions):
-        return actions * torch.log(policy) + (1 - actions) * torch.log(1 - policy)
 
     def forward(self, inp):
         conv = self.conv(inp)
@@ -124,8 +124,7 @@ class Model2(nn.Module):
 
         new_acts, policy, value = self(states)
 
-        policy_loss = -self.il_weight * self._bernoulli_loss(policy, actions)
-
+        policy_loss = self.il_weight * self.bce_loss(policy, actions)
         policy_loss = policy_loss.mean()
 
         self.optimizer.zero_grad()
@@ -140,17 +139,20 @@ class Model2(nn.Module):
         states, acts, rewards, advs = [torch.from_numpy(tensor).to(self.device)
                                        for tensor in rollouts]
 
+        states = states.permute(0, 3, 1, 2)
+
         actions, policy, value = self(states)
 
-        policy_loss = -advs * self._bernoulli_loss(policy, acts)
+        policy_loss = advs.unsqueeze(1) * self.bce_loss(policy, acts)
         policy_loss = policy_loss.mean()
 
-        value_loss = nn.MSELoss()(value, rewards)
+        value_loss = self.mse_loss(value, rewards.unsqueeze(1))
 
-        mse = nn.MSELoss()
-        rnd_reward = mse(self.rnd(states), self.rnd_target(states).detach())
+        rnd_loss = self.mse_loss(self.rnd(states),
+                                 self.rnd_target(states).detach())
 
-        loss = policy_loss + value_loss + rnd_reward
+        loss = policy_loss + value_loss + rnd_loss
+        print(loss)
 
         self.optimizer.zero_grad()
         loss.backward()

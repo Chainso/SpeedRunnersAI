@@ -66,8 +66,6 @@ class SpeedRunnersEnv():
         """
         Resets the game (in practice).
         """
-        self.start()
-
         self.actor.release_keys()
         self._episode_finished(True)
         self.sv.set_polled()
@@ -114,7 +112,8 @@ class SpeedRunnersEnv():
         """
         Returns the reward for the current state of the environment.
         """
-        reward = -1 / (self._get_speed() + 1)
+        reward = 0
+        #reward = self._get_speed() / 700
 
         obst_dif = self._get_obstacles_hit() - self.num_obstacles_hit
 

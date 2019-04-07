@@ -102,6 +102,8 @@ class ModelRunner(PyKeyboardEvent):
             print("Playing resumed")
             self.playing = True
 
+            self.sr_game.start()
+
         # Start the loop if it's the first time starting
         if(not self.listening):
             self.listening = True
@@ -109,8 +111,6 @@ class ModelRunner(PyKeyboardEvent):
             # Create a thread for the main loop
             loop_listening = Thread(target = self._loop_listening)
             loop_listening.start()
-
-            self.sr_game.start()
 
     def pause_playing(self):
         """

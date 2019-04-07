@@ -87,7 +87,7 @@ class HDF5Handler():
         """
         Closes the file
         """
-        print("Dataset size:", len(self))
+        print("Dataset size:", str(len(self)))
         self.file.close()
 
     def read_config(self):
@@ -109,16 +109,12 @@ class HDF5Handler():
         num_samples : The number of samples to retrieve
         cuda : If the sample should return a cuda tensor
         """
-        # The states and actions to be returned
-        states = []
-        actions = []
-
         # Get the random indices to get data from
         randIndices = np.random.randint(0, len(self), num_samples)
 
         # Get the state and action at that index
-        states.append(self.states[randIndices, :, :, :])
-        actions.append(self.actions[randIndices, :])
+        states = self.states[randIndices, :, :, :]
+        actions = self.actions[randIndices, :]
 
         # Stack the array
         states = (np.stack(states) / 255.0)
@@ -143,17 +139,18 @@ class HDF5Handler():
         sample_size : The size of each sample
         cuda : If the sample should be a cuda tensor
         """
-        # The states and actions to be returned
+        # The states and actions
         states = []
         actions = []
 
         # Get the random indices to get data from
         randIndices = np.random.randint(0, len(self) - sample_size, num_samples)
 
-        # Get the state and action at that index
-        states.append(self.states[randIndices:randIndices + sample_size])
-        actions.append(self.actions[randIndices:randIndices + sample_size])
-
+        for rand_int in randIndices:
+            # Get the state and action at that index
+            states.append(self.states[rand_int:rand_int + sample_size, :, :, :])
+            actions.append(self.actions[rand_int:rand_int + sample_size, :])
+  
         # Stack the arrays
         states = (np.stack(states) / 255.0)
         actions = np.stack(actions)
@@ -174,7 +171,7 @@ class HDF5Handler():
 
         cuda : If the training data should be a cuda tensor
         """
-        return self.sample(len(self, cuda))
+        return self.sample(len(self), cuda)
 
     def get_states(self, start_index = 0, end_index = None, cuda = False):
         """

@@ -90,7 +90,7 @@ class Recorder(PyKeyboardEvent):
                 # If it is time to save then convert to numpy and save to the
                 # Numpy file
                 if(save_counter == self.save_interval):
-                    states = np.stack(states)
+                    states = np.stack(states) / 255.0
                     actions = np.stack(actions)
 
                     # Create a thread to save the datajjp

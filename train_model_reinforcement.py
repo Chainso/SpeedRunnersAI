@@ -1,8 +1,10 @@
 import torch
+import numpy as np
 
 from threading import Thread
 from configparser import ConfigParser
 from pykeyboard import PyKeyboardEvent
+from time import time
 
 from model2 import Model2
 from hdf5_handler import HDF5Handler
@@ -72,63 +74,79 @@ class ModelTrainer(PyKeyboardEvent):
         """
         Ensures that the program will continue listening until closure
         """
+        episode = 1
+        collection_length = self.batch_size * self.sequence_length
+
         while(self.listening):
             # Record the keys and game frames while recording is enabled
             while(self.playing):
-                episode = 1
-                while(episode <= self.episodes):
+                while(episode <= self.episodes and self.playing):
                     states = []
                     actions = []
                     rewards = []
                     values = []
-    
+
                     state = self.sr_game.reset()
                     terminal = False
+                    i = 0
+
+                    while(not terminal and self.playing):
+                        while(i < collection_length
+                              and self.playing and not terminal):
+                            start = time()
+
+                            state = self.sr_game.state
+
+                            tens_state = torch.FloatTensor([state]).to(self.model.device)
+                            tens_state = (tens_state / 255.0).permute(0, 3, 1, 2)
+            
+                            action, policy, value, rnd = self.model.step(tens_state)
+            
+                            next_state, reward, terminal = self.sr_game.step(action)
+
+                            reward = reward + rnd
     
-                    i = 0;
-                    while(i < self.batch_size and self.playing and not terminal):
-                        tens_state = torch.FloatTensor([state]).to(self.model.device).permute(0, 3, 2, 1)
-                        self.sr_game.sv.set_polled()
+                            states.append(state)
+                            actions.append(action)
+                            rewards.append(reward)
+                            values.append(value)
+
+                            i += 1
+
+                            #print("Loop time:", time() - start)
+
+                        if(len(states) == collection_length):
+                            states = (np.stack(states) / 255.0).astype(np.float32)
+                            actions = np.array(actions, dtype=np.float32)
+                            rewards = np.array(rewards, dtype=np.float32)
+                            values = np.array(values, dtype=np.float32)
+
+                            returns = discount(rewards, decay)
+                            advantages = returns - values
+                            advantages = normalize(advantages, 1e-5).astype(np.float32)
         
-                        action, policy, value, rnd = self.model.step(tens_state)
-        
-                        next_state, reward, terminal = self.sr_game.step(action)
-
-                        reward = reward + rnd
-
-                        states.append(state)
-                        actions.append(action)
-                        rewards.append(reward)
-                        values.append(value)
+                            self.model.train_reinforce([states, actions, rewards,
+                                                       advantages])
     
-                        state = next_state
+                            supervised = self.data_handler.sequenced_sample(
+                                                               self.batch_size,
+                                                               self.sequence_length,
+                                                               str(self.model.device) == "cuda"
+                                                               )
+                            supervised = [tens.view(-1, *tens.shape[2:])
+                                          for tens in supervised]
+                            self.model.train_supervised(*supervised)
     
-                        i += 1
-    
-                    if(len(states) == self.batch_size * self.sequence_length):
-                        returns = discount(rewards, decay)
-                        advantages = returns - values
-                        advantages = normalize(advantages, 1e-5)
-    
-                        self.model.train_reinforce([states, actions, rewards,
-                                                   advantages])
+                if(episode % self.save_interval == 0):
+                    self.model.save(self.save_path)
 
-                        supervised = self.data_handler.sequenced_sample(
-                                                           self.batch_size,
-                                                           self.sequence_length,
-                                                           self.model.device == "cuda"
-                                                           )
-
-                        self.model.train_supervised(*supervised)
-
-                    if(episode % self.save_interval == 0):
-                        self.model.save(self.save_path)
+                if(episode == self.episodes):
+                    self.stop()
 
     def tap(self, keycode, character, press):
         """
         Will handle the key press event to start, stop and end the program.
         """
-        print("\nReceived:", character)
         if(press):
             # Start recording on the recording key press
             if(character == self.start_key and not self.playing):
@@ -147,16 +165,13 @@ class ModelTrainer(PyKeyboardEvent):
         if(not self.playing):
             print("Playing resumed")
             self.playing = True
-
-        # Start the loop if it's the first time starting
-        if(not self.listening):
-            self.listening = True
-
-            # Create a thread for the main loop
-            loop_listening = Thread(target = self._loop_listening)
-            loop_listening.start()
-
             self.sr_game.start()
+
+            if(not self.listening):
+                self.listening = True
+
+                loop_listening = Thread(target = self._loop_listening)
+                loop_listening.start()
 
     def pause_playing(self):
         """
@@ -165,7 +180,7 @@ class ModelTrainer(PyKeyboardEvent):
         if(self.playing):
             print("Playing paused")
             self.playing = False
-            self.env.pause()
+            self.sr_game.pause()
 
     def close_program(self):
         """
@@ -231,14 +246,14 @@ if(__name__ == "__main__"):
 
     state_space = (128, 128, 1)
     act_n = 7
-    batch_size = 10
+    batch_size = 1
     sequence_length = 15
     il_weight = 1.0
     model_args = (state_space, act_n, batch_size, il_weight, device)
     model = Model2(*model_args).to(torch.device(device))
 
     data_handler = HDF5Handler("r+", 1)
-    print("Data length:", len(data_handler), "samples")
+    print("Dataset size:", len(data_handler))
     episodes = 100
     decay = 0.99
     save_interval = 1
@@ -250,6 +265,14 @@ if(__name__ == "__main__"):
     trainer = ModelTrainer(model, data_handler, episodes, batch_size,
                            sequence_length, decay, save_interval, load_path)
     trainer.run()
+
+    # Create a thread for the main loop
+    """
+    loop_listening = Thread(target = trainer._loop_listening)
+    loop_listening.start()
+    loop_listening.join()
+    """
+
     #trainer.listening = True
     #trainer.playing = True
     #trainer._loop_listening()
