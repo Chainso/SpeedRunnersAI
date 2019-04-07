@@ -122,8 +122,10 @@ class ModelTrainer(PyKeyboardEvent):
                             advantages = returns - values
                             advantages = normalize(advantages, 1e-5).astype(np.float32)
         
-                            self.model.train_reinforce([states, actions, rewards,
-                                                       advantages])
+                            loss = self.model.train_reinforce([states, actions,
+                                                               rewards,
+                                                               advantages])
+                            print("Loss:", loss)
                             """ Just training RND for now
                             supervised = self.data_handler.sequenced_sample(
                                                                self.batch_size,
@@ -144,6 +146,8 @@ class ModelTrainer(PyKeyboardEvent):
         """
         Will handle the key press event to start, stop and end the program.
         """
+        character = character.lower()
+
         if(press):
             # Start recording on the recording key press
             if(character == self.start_key and not self.playing):

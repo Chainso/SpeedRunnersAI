@@ -1,5 +1,7 @@
 import numpy as np
 
+from time import time
+
 from speedrunners.screen_viewer import ScreenViewer
 from speedrunners.memory_reader import MemoryReader
 from speedrunners.actor2 import Actor
@@ -30,6 +32,7 @@ class SpeedRunnersEnv():
 
         self._last_time = 0
         self.num_obstacles_hit = self._get_obstacles_hit()
+        self.start_time = 0
 
     @property
     def state(self):
@@ -66,10 +69,11 @@ class SpeedRunnersEnv():
         """
         Resets the game (in practice).
         """
-        self.actor.release_keys()
+        self.actor.reset()
         self._episode_finished(True)
         self.sv.set_polled()
         self.sv.GetNewScreen()
+        self.start_time = time()
 
         return self.state
 
@@ -148,8 +152,16 @@ class SpeedRunnersEnv():
                 if self.memory is not None else 0)
 
     def _episode_finished(self, reset = False):
+        """ Uncomment out when the memory reader is finished
         if((self.max_time is not None
             and self._get_current_time() > self.max_time)
+           or reset):
+            self._last_time = 0
+            self._terminal = True
+            self._reached_goal = False
+        """
+        if((self.max_time is not None
+            and (time() - self.start_time) > self.max_time)
            or reset):
             self._last_time = 0
             self._terminal = True
@@ -162,9 +174,6 @@ class SpeedRunnersEnv():
             self._last_time = self._get_current_time()
             self._terminal = False
             self._reached_goal = False
-
-        if(self._terminal and not self._reached_goal and not reset):
-            self.sv.stop()
 
     def state_space(self):
         return self.res_shape

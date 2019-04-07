@@ -25,6 +25,8 @@ class Actor():
                               (self.speedrunners["LEFT"], 0),
                               (self.speedrunners["RIGHT"], 0)]
 
+        self._reset = self.speedrunners["RESET"]
+
         self.action_values = OrderedDict(self.action_values)
         self.action_values_items = list(self.action_values.items())
 
@@ -116,6 +118,14 @@ class Actor():
         for key in self.action_values:
             self.stop_action(key)
 
+    def reset(self):
+        """
+        Resets the game.
+        """
+        self.keyboard.tap_key(self._reset)
+        
+        self.release_keys()
+
     def stop(self):
         """
         Closes the actor.
@@ -138,4 +148,4 @@ class Actor():
         # Read the config file, make sure not to re-name
         config.read("config.ini")
 
-        return config["SpeedRunners Config"]
+        return config["SpeedRunners Config"]                                                  
