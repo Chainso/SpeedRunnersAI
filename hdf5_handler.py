@@ -87,7 +87,7 @@ class HDF5Handler():
         """
         Closes the file
         """
-        print("Dataset size:" + len(self))
+        print("Dataset size:", len(self))
         self.file.close()
 
     def read_config(self):
