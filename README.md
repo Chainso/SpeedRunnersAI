@@ -22,7 +22,21 @@ OpenCV
 
 Set up your key bindings in the [config.ini](config.ini) file. Model parameters can be altered in [train_model_supervised.py](train_model_supervised), and [train_model_reinforcement.py](train_model_reinforcement.py).
 
+&nbsp;
+
 ## Recording Gameplay ##
 
-Run record_gameplay.py and open your SpeedRunners game. 
+Run record_gameplay.py and open your SpeedRunners game. Using the keybindings set in [config.ini](config.ini), start and stop recording.
+
+&nbsp;
+
+## Training the Model ##
+
+To train the model only using your recorded samples, run [train_model_supervised.py](train_model_supervised.py). To train the model using reinforcement learning and supervised learning (MAIL algorithm), run [train_model_reinforcement.py](train_model_reinforcement.py).
+
+&nbsp;
+
+## Running the Model ##
+
+To run the model on the game, run [run_model.py](run_model.py) and use the keybindings to start and stop the agent.
 
