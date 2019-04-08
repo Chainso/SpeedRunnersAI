@@ -32,7 +32,7 @@ Run record_gameplay.py and open your SpeedRunners game. Using the keybindings se
 
 ## Training the Model ##
 
-To train the model only using your recorded samples, run [train_model_supervised.py](train_model_supervised.py). To train the model using reinforcement learning and supervised learning (MAIL algorithm), run [train_model_reinforcement.py](train_model_reinforcement.py).
+To train the model only using your recorded samples, run [train_model_supervised.py](train_model_supervised.py). To train the model using reinforcement learning and supervised learning (MAIL algorithm), run [train_model_reinforcement.py](train_model_reinforcement.py). For training using reinforcement learning, make sure to run the game offline.
 
 &nbsp;
 
