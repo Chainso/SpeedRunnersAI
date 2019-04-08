@@ -1,191 +1,151 @@
-from time import sleep
-
 from pykeyboard import PyKeyboard
+from collections import OrderedDict
+from configparser import ConfigParser
 
 class Actor():
     def __init__(self):
+        """
+        Creates an actor for the game speedrunners
+        """
         # Get the keyboard
         self.keyboard = PyKeyboard()
 
-        # The reset button
-        self._reset = "r"
+        # Read the player key-bindings from the config
+        self.speedrunners = self.read_config()
 
-        # All the keys for the game configuration
-        self._jump = "a"
-        self._grapple = "s"
-        self._item = "d"
-        self._slide = self.keyboard.down_key
-        self._left = self.keyboard.left_key
-        self._right = self.keyboard.right_key
-        self._boost = " "
+        if(self.speedrunners["BOOST"] == ""):
+            self.speedrunners["BOOST"] = " "
 
-        # All the keys being used
-        self._keys = [self._jump, self._grapple, self._item, self._slide,
-                      self._left, self._right, self._boost]
+        # The current values of the actions and the corresponding function
+        self.action_values = [(self.speedrunners["JUMP"], 0),
+                              (self.speedrunners["GRAPPLE"], 0),
+                              (self.speedrunners["ITEM"], 0),
+                              (self.speedrunners["BOOST"], 0),
+                              (self.speedrunners["SLIDE"], 0),
+                              (self.speedrunners["LEFT"], 0),
+                              (self.speedrunners["RIGHT"], 0)]
 
-        # The last action that was taken
-        self._last_command = ""
+        self._reset = self.speedrunners["RESET"]
 
-        # All of the possible actions
-        self._actions = {0 : self.left,
-                         1 : self.left_boost,
-                         2 : self.right,
-                         3 : self.right_boost,
-                         4 : self.jump,
-                         5 : self.jump_left,
-                         6 : self.jump_left_boost,
-                         7 : self.jump_right,
-                         8 : self.jump_right_boost,
-                         9 : self.grapple,
-                         10 : self.grapple_left,
-                         11 : self.grapple_right,
-                         12 : self.item,
-                         13 : self.item_boost,
-                         14 : self.item_left,
-                         15 : self.item_left_boost,
-                         16 : self.item_right,
-                         17 : self.item_right_boost,
-                         18 : self.slide}
+        self.action_values = OrderedDict(self.action_values)
+        self.action_values_items = list(self.action_values.items())
 
-        # The number of possible actinos
-        self.num_actions = len(self._actions)
+    def act(self, actions):
+        """
+        Causes the actor to act based on the actions given
 
-    def perform_action(self, action):
-        self._actions[action]()
+        action : The actions for the actor to perform, a (6,) size array
+        """
+        for i in range(len(actions)):
+            # Get the value of the action
+            value = actions[i]
 
-    def reset(self):
-        self.keyboard.press_key(self._reset)
-        sleep(1e-2)
-        self.keyboard.release_key(self._reset)
+            # Get the action
+            action = self.action_values_items[i][0]
 
-        self.release_keys()
+            # Start or stop the action
+            self.set_action(action, value)
 
-    def press_keys(self, *keys):
-        # Loop through all the keys
-        for key in self._keys:
-            # Press the key if it was given
-            if(key in keys):
-                self.keyboard.press_key(key)
+    def set_action(self, action, value):
+        """
+        Will perform the action and set the value to 1 if the given value is
+        positive, otherwise will stop performing the action and set the value
+        to -1 if the given value is negative.
 
-            # Release it otherwise
-            else: 
-                self.keyboard.release_key(key)
+        action : The action to either stop or perform.
+        value : The value of the action, negative to stop, positive to perform.
+        """
+        # Check the value
+        if(value == 0):
+            self.stop_action(action)
+        else:
+            self.single_action(action)
 
-    def left(self):
-        if(self._last_command != "left"):
-            self.press_keys(self._left)
+    def single_action(self, action):
+        """
+        Does the single action given without checking for other actions
 
-            self._last_command = "left"
+        action : The action to perform
+        """
+        # Get the current value of the action
+        value = self.action_values[action]
 
-    def left_boost(self):
-        if(self._last_command != "left_boost"):
-            self.press_keys(self._left, self._boost)
+        # Check if the action is already down
+        if(value != 1):
+            if(action.lower() == "down"):
+                self.keyboard.press_key(self.keyboard.down_key)
+            elif(action.lower() == "left"):
+                self.keyboard.press_key(self.keyboard.left_key)
+            elif(action.lower() == "right"):
+                self.keyboard.press_key(self.keyboard.right_key)
+            elif(action.lower() == "space"):
+                self.keyboard.press_key(self.keyboard.space_key)
+            else:
+                self.keyboard.press_key(action)
 
-            self._last_command = "left_boost"
+            self.action_values[action] = 1
 
-    def right(self):
-        if(self._last_command != "right"):
-            self.press_keys(self._right)
+    def stop_action(self, action, total_reset = False):
+        """
+        Stops performing the given action if it is down
 
-            self._last_command = "right"
+        action : The action to stop performing
+        total_reset : If both direction keys should be released if given a
+                      direction key
+        """
+        # Get the current value of the action
+        value = self.action_values[action]
 
-    def right_boost(self):
-        if(self._last_command != "right_boost"):
-            self.press_keys(self._right, self._boost)
+        # Check if the action is already down
+        if(value != 0):
+            if(action.lower() == "down"):
+                self.keyboard.release_key(self.keyboard.down_key)
+            elif(action.lower() == "left"):
+                self.keyboard.release_key(self.keyboard.left_key)
+            elif(action.lower() == "right"):
+                self.keyboard.release_key(self.keyboard.right_key)
+            elif(action.lower() == "space"):
+                self.keyboard.release_key(self.keyboard.space_key)
+            else:
+                self.keyboard.release_key(action)
 
-            self._last_command = "right_boost"
-
-    def jump(self):
-        if(self._last_command != "jump"):
-            self.press_keys(self._jump)
-
-            self._last_command = "jump"
-
-    def jump_left(self):
-        if(self._last_command != "jump_left"):
-            self.press_keys(self._jump, self._left)
-
-            self._last_command = "jump_left"
-
-    def jump_left_boost(self):
-        if(self._last_command != "jump_left_boost"):
-            self.press_keys(self._jump, self._left, self._boost)
-            
-            self._last_command = "jump_left_boost"
-
-
-    def jump_right(self):
-        if(self._last_command != "jump_right"):
-            self.press_keys(self._jump, self._right)
-
-            self._last_command = "jump_right"
-
-    def jump_right_boost(self):
-        if(self._last_command != "jump_right_boost"):
-            self.press_keys(self._jump, self._right, self._boost)
-
-            self._last_command = "jump_right_boost"
-
-    def grapple(self):
-        if(self._last_command != "grapple"):
-            self.press_keys(self._grapple)
-
-            self._last_command = "grapple"
-
-    def grapple_left(self):
-        if(self._last_command != "grapple_left"):
-            self.press_keys(self._grapple, self._left)
-
-            self._last_command = "grapple_left"
-
-    def grapple_right(self):
-        if(self._last_command != "grapple_right"):
-            self.press_keys(self._grapple, self._right)
-
-            self._last_command = "grapple_right"
-
-    def item(self):
-        if(self._last_command != "item"):
-            self.press_keys(self._item)
-
-            self._last_command = "item"
-
-    def item_boost(self):
-        if(self._last_command != "item_boost"):
-            self.press_keys(self._item, self._boost)
-
-            self._last_command = "item_boost"
-
-    def item_left(self):
-        if(self._last_command != "item_left"):
-            self.press_keys(self._item, self._left)
-
-            self._last_command = "item_left"
-
-    def item_left_boost(self):
-        if(self._last_command != "item_left_boost"):
-            self.press_keys(self._item, self._left, self._boost)
-
-            self._last_command = "item_left_boost"
-
-    def item_right(self):
-        if(self._last_command != "item_right"):
-            self.press_keys(self._item, self._right)
-
-            self._last_command = "item_right"
-
-    def item_right_boost(self):
-        if(self._last_command != "item_right_boost"):
-            self.press_keys(self._item, self._right, self._boost)
-
-            self._last_command = "item_right_boost"
-
-    def slide(self):
-        if(self._last_command != "slide"):
-            self.press_keys(self._slide)
-
-            self._last_command = "slide"
+            self.action_values[action] = 0
 
     def release_keys(self):
-        for key in self._keys:
-            self.keyboard.release_key(key)
+        """
+        Releases every key in the current list of given actions
+        """
+        for key in self.action_values:
+            self.stop_action(key)
+
+    def reset(self):
+        """
+        Resets the game.
+        """
+        self.keyboard.tap_key(self._reset)
+        
+        self.release_keys()
+
+    def stop(self):
+        """
+        Closes the actor.
+        """
+        self.release_keys()
+
+    def num_actions(self):
+        """
+        Returns the number of actions the actor can take.
+        """
+        return len(self.action_values)
+
+    def read_config(self):
+        """
+        Reads the config file to obtain the settings for the recorder, the
+        window size for the training data and the game bindings
+        """
+        config = ConfigParser()
+    
+        # Read the config file, make sure not to re-name
+        config.read("config.ini")
+
+        return config["SpeedRunners Config"]                                                  

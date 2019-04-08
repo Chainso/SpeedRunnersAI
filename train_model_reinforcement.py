@@ -6,7 +6,7 @@ from configparser import ConfigParser
 from pykeyboard import PyKeyboardEvent
 from time import time
 
-from model2 import Model2
+from model import Model
 from hdf5_handler import HDF5Handler
 from speedrunners import SpeedRunnersEnv
 from utils import discount, normalize
@@ -251,7 +251,7 @@ if(__name__ == "__main__"):
     sequence_length = 15
     il_weight = 1.0
     model_args = (state_space, act_n, batch_size, il_weight, device)
-    model = Model2(*model_args).to(torch.device(device))
+    model = Model(*model_args).to(torch.device(device))
 
     data_handler = HDF5Handler("r+", 1)
     print("Dataset size:", len(data_handler))
@@ -262,18 +262,8 @@ if(__name__ == "__main__"):
     save_path = "./Trained Models/"
     load_path = save_path + "mail-1.torch"
     #model.load(load_path)
-    #train_model(model, data_handler, episodes, full_rollout_length, save_path)
+
     trainer = ModelTrainer(model, data_handler, episodes, batch_size,
                            sequence_length, decay, save_interval, load_path)
     trainer.run()
 
-    # Create a thread for the main loop
-    """
-    loop_listening = Thread(target = trainer._loop_listening)
-    loop_listening.start()
-    loop_listening.join()
-    """
-
-    #trainer.listening = True
-    #trainer.playing = True
-    #trainer._loop_listening()

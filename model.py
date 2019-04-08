@@ -1,120 +1,163 @@
 import torch
 import torch.nn as nn
 
-from vae import VAE
-from distributions import MultiCategoricalDistribution, TanhGaussianMixtureModel
-from utils import LSTM
+from utils import LSTM, GaussianNoise
 
 class Model(nn.Module):
-    def __init__(self, device = "cpu"):
-        """
-        Creates the model to be used by the bot on the device given.
-        """
+    def __init__(self, state_space, act_n, batch_size, il_weight,
+                 device = "cpu"):
         nn.Module.__init__(self)
 
-        self._device = torch.device(device)
+        self.state_space = state_space
+        self.batch_size = batch_size
+        self.il_weight = il_weight
 
-        # Set the encoded size and get the decoder input channels and dist shape
-        self.enc_size = 128
-        self.dist_shape = 4
-        self.dec_input_channels = 128 // (self.dist_shape ** 2)
+        self.device = torch.device(device)
 
-        # Get the variational autoencoder
-        self.vae = VAE(self.enc_size, self.dist_shape, self.dec_input_channels)
+        self.rnd_target = self._rnd_net(state_space)
+        self.rnd = self._rnd_net(state_space)
 
-        # The LSTM
-        self.lstm = LSTM(1, self.enc_size, self.enc_size, 3, dropout = 0.3)
+        self.conv = nn.Sequential(
+                self._conv_block(state_space[-1], 32, 5, 2, 0),
+                self._conv_block(32, 32, 3, 2, 0),
+                self._conv_block(32, 64, 3, 2, 0),
+                self._conv_block(64, 64, 3, 2, 0),
+                self._conv_block(64, 64, 3, 1, 0)
+                )
 
-        # Get the multi-categorical distribution
-        #self.action = TanhGaussianMixtureModel(self.enc_size, 6)
-        self.action = MultiCategoricalDistribution(self.enc_size, 6)
+        self.linear = nn.Sequential(
+                nn.Linear(1024, 256),
+                nn.ReLU(),
+                nn.Dropout(p = 0.5)
+                )
 
-        # The optimizer for the model
-        self.optim = torch.optim.Adam(self.parameters(), lr = 1e-3)
+        self.lstm = LSTM(self.batch_size, 256, 256, 1)
+        self.lstm_dropout = nn.Dropout(p = 0.5)
 
-    @property
-    def device(self):
-        """
-        Returns the device the model is on.
-        """
-        return self._device
+        self.policy = nn.Sequential(
+                nn.Linear(256, act_n),
+                nn.Sigmoid()
+                )
+
+        self.noise = GaussianNoise(mean = 0, std = 0.05)
+
+        self.value = nn.Linear(256, 1)
+
+        self.bce_loss = nn.BCELoss(reduction = "none")
+        self.mse_loss = nn.MSELoss()
+
+        self.optimizer = torch.optim.Adam(self.parameters(), lr = 1e-4)
+
+    def _conv_no_dropout(self, filt_in, filt_out, kernel, stride, padding):
+        return nn.Sequential(
+                nn.Conv2d(filt_in, filt_out, kernel, stride, padding),
+                nn.ReLU(),
+                )
+
+    def _conv_block(self, filt_in, filt_out, kernel, stride, padding):
+        return nn.Sequential(
+                self._conv_no_dropout(filt_in, filt_out, kernel, stride,
+                                      padding),
+                nn.Dropout(p = 0.6)
+                )
+
+    def _rnd_net(self, state_space):
+        return nn.Sequential(
+                self._conv_no_dropout(state_space[-1], 32, 5, 2, 0),
+                self._conv_no_dropout(32, 32, 3, 2, 0),
+                self._conv_no_dropout(32, 64, 3, 2, 0),
+                self._conv_no_dropout(64, 64, 3, 2, 0),
+                self._conv_no_dropout(64, 64, 3, 1, 0)
+                )
 
     def forward(self, inp):
-        """
-        Returns the action vector for the given input images
+        conv = self.conv(inp)
+        conv = conv.view(-1, 1024)
 
-        inp : The input images to get the actions for
-        """
-        # Get the encoded input sample and resize to input to LSTM
-        enc_sample = self.vae.sample(*self.vae.encode(inp))
-        enc_sample = enc_sample.view(enc_sample.size()[0], 1,
-                                     enc_sample.size()[-1])
+        linear = self.linear(conv)
+        linear = linear.view(len(inp) // self.batch_size, -1, 256)
 
-        # Get the LSTM output and reshape for action distribution input
-        lstm = self.lstm(enc_sample)
-        lstm = lstm.view(lstm.size()[0], lstm.size()[-1])
+        lstm = self.lstm(linear)
+        lstm = lstm.view(-1, 256)
+        lstm = self.lstm_dropout(lstm)
 
-        # Get the actions
-        action = self.action.distribution(lstm)
-        #action = self.action.mixture(lstm)
+        policy = self.policy(lstm)
 
-        # Round the values
-        return action
+        actions = torch.distributions.Bernoulli(policy)
+        actions = actions.sample()
+
+        value = self.value(lstm)
+
+        return actions, policy, value
 
     def step(self, inp):
-        """
-        Returns the action vector for a single input image
+        conv = self.conv(inp)
+        conv = conv.view(-1, 1024)
 
-        inp : The input images to get the actions for
-        """
-        # Normed output
-        norm_out = (self(inp)[0] * 2) - 1
-        return norm_out.detach().numpy()
-        #return self(inp).detach().numpy()[0]
+        linear = self.linear(conv)
+        linear = linear.view(1, 1, 256)
 
-    def calculate_loss(self, inp, actions):
-        """
-        Calculates the loss for the given input image and action
+        lstm = self.lstm(linear)
+        lstm = lstm.view(-1, 256)
+        lstm = self.lstm_dropout(lstm)
 
-        inp : The input images
-        action : The target actions
-        """
-        # Get the means, log standard deviations, distribution sample and
-        # generated images
-        means, log_stds, sample, gen_imgs = self.vae(inp)
+        policy = self.policy(lstm)
 
-        # Add the next dimension for the LSTM
-        sample = sample.view(sample.size()[0], 1, sample.size()[-1])
+        actions = torch.distributions.Bernoulli(policy)
+        actions = actions.sample()
 
-        # Get the lstm output for the input sample
-        lstm = self.lstm(sample.detach())
-        lstm = lstm.view(lstm.size()[0], lstm.size()[-1])
+        actions = actions[0].detach().cpu().numpy()
+        policy = policy[0].detach().cpu().numpy()
 
-        # Get the VAE loss
-        vae_loss = self.vae.calculate_loss(inp, means, log_stds, gen_imgs)
+        value = self.value(lstm)
+        value = value.item()
 
-        # Get the multi-categorical distributions loss
-        action_loss = self.action.calculate_loss(lstm, actions)
+        mse = nn.MSELoss()
+        rnd_reward = mse(self.rnd(inp), self.rnd_target(inp).detach()).item()
 
-        return vae_loss + action_loss
+        return actions, policy, value, rnd_reward
 
-    def train(self, inp, actions):
-        """
-        Trains the network for the batch of inputs and actions
+    def train_supervised(self, states, actions):
+        states = self.noise(states)
 
-        inp : The input images
-        actions : The target actions
-        """
-        # Get the loss
-        loss = self.calculate_loss(inp, actions)
+        self.lstm.reset_hidden()
 
-        # Proprogate the loss backwards
-        self.optim.zero_grad()
+        new_acts, policy, value = self(states)
+
+        policy_loss = self.il_weight * self.bce_loss(policy, actions)
+        policy_loss = policy_loss.mean()
+
+        self.optimizer.zero_grad()
+        policy_loss.backward()
+        self.optimizer.step()
+
+        return policy_loss.detach().numpy()
+
+    def train_reinforce(self, rollouts):
+        self.lstm.reset_hidden()
+
+        states, acts, rewards, advs = [torch.from_numpy(tensor).to(self.device)
+                                       for tensor in rollouts]
+
+        states = states.permute(0, 3, 1, 2)
+
+        actions, policy, value = self(states)
+
+        policy_loss = advs.unsqueeze(1) * self.bce_loss(policy, acts)
+        policy_loss = policy_loss.mean()
+
+        value_loss = self.mse_loss(value, rewards.unsqueeze(1))
+
+        rnd_loss = self.mse_loss(self.rnd(states),
+                                 self.rnd_target(states).detach())
+ 
+        loss = policy_loss + value_loss + rnd_loss
+
+        self.optimizer.zero_grad()
         loss.backward()
-        self.optim.step()
+        self.optimizer.step()
 
-        # Return a numpy array of the losses
-        return loss.detach().numpy()
+        return loss.detach().item()
 
     def reset_hidden_state(self):
         """

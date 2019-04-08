@@ -4,7 +4,7 @@ from time import time
 
 from speedrunners.screen_viewer import ScreenViewer
 from speedrunners.memory_reader import MemoryReader
-from speedrunners.actor2 import Actor
+from speedrunners.actor import Actor
 
 class SpeedRunnersEnv():
     # The addresses of all the values to get
@@ -176,7 +176,13 @@ class SpeedRunnersEnv():
             self._reached_goal = False
 
     def state_space(self):
+        """
+        Returns the shape of the captured images.
+        """
         return self.res_shape
 
     def action_space(self):
+        """
+        Returns the number of concurrent actions the agent can take.
+        """
         return self.num_actions

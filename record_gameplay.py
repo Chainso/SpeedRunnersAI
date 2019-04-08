@@ -1,6 +1,6 @@
 import numpy as np
 
-from hdf5_handler import HDF5Handler
+from hdf5_handler2 import HDF5Handler
 from speedrunners import SpeedRunnersEnv
 
 from collections import OrderedDict
@@ -28,6 +28,9 @@ class Recorder(PyKeyboardEvent):
         # Get the information from the config
         recording_config, window_size, self.speedrunners = self.read_config()
 
+        if(self.speedrunners["BOOST"] == ""):
+            self.speedrunners["BOOST"] = " "
+
         # Get the start, end and close key and the save interval from the
         # config
         self.start_key = recording_config["START_KEY"].lower()
@@ -53,7 +56,10 @@ class Recorder(PyKeyboardEvent):
                         (self.speedrunners["ITEM"], 0),
                         (self.speedrunners["BOOST"], 0),
                         (self.speedrunners["SLIDE"], 0),
-                        ("direction", 1)]
+                        (self.speedrunners["LEFT"], 0),
+                        (self.speedrunners["RIGHT"], 0)]
+
+
         self.actions = OrderedDict(self.actions) 
 
     def _loop_listening(self):
@@ -71,7 +77,8 @@ class Recorder(PyKeyboardEvent):
             # Record the keys and game frames while recording is enabled
             while(self.recording):
                 # Get the state and current action
-                state = self.sr_game.GetNewScreen()
+                state = self.sr_game.sv.GetNewScreen()
+                self.sr_game.sv.set_polled()
                 action = [self.actions[button] for button in self.actions]
 
                 # Append to the list of states and actions
@@ -83,10 +90,10 @@ class Recorder(PyKeyboardEvent):
                 # If it is time to save then convert to numpy and save to the
                 # Numpy file
                 if(save_counter == self.save_interval):
-                    states = np.stack(states)
+                    states = np.stack(states) / 255.0
                     actions = np.stack(actions)
 
-                    # Create a thread to save the data
+                    # Create a thread to save the datajjp
                     saver = Thread(target = self.data_handler.add,
                                    args = (states, actions))
                     saver.start()
@@ -120,18 +127,11 @@ class Recorder(PyKeyboardEvent):
             # Close the program on the close key press
             elif(character == self.close_key):
                 self.close_program()
-            # Check for left key as well
-            elif(character == self.speedrunners["LEFT"]):
-                self.actions["direction"] = 0
-            elif(character == self.speedrunners["RIGHT"]):
-                self.actions["direction"] = 1
             # Otherwise map the key to the action
             elif(character in self.actions):
                 self.actions[character] = 1
         # Map the key to the action
-        elif(not press and character is not self.speedrunners["LEFT"]
-             and character is not self.speedrunners["RIGHT"]
-             and character in self.actions):
+        elif(not press and character in self.actions):
             self.actions[character] = 0
 
     def start_recording(self):
@@ -160,7 +160,7 @@ class Recorder(PyKeyboardEvent):
         if(self.recording):
             print("Recording paused")
             self.recording = False
-            self.sr_game.Stop()
+            self.sr_game.pause()
 
     def close_program(self):
         """

@@ -3,6 +3,9 @@ import torch.nn as nn
 import numpy as np
 
 def discount(rewards, decay):
+    """
+    Returns the discounted returns of the reward vectors.
+    """
     ret = 0
     returns = []
 
@@ -13,10 +16,16 @@ def discount(rewards, decay):
     return np.array(returns[::-1])
 
 def normalize(vector, epsilon):
+    """
+    Normalizes the given vector.
+    """
     return (vector - vector.mean()) / (vector.std() + epsilon)
 
 class GaussianNoise(nn.Module):
     def __init__(self, mean=0, std=0.05):
+        """
+        Creates a module that adds gaussian noise to its inputs.
+        """
         nn.Module.__init__(self)
 
         self.mean = mean

@@ -4,9 +4,8 @@ from configparser import ConfigParser
 from pykeyboard import PyKeyboardEvent
 from threading import Thread
 
-from model2 import Model2
+from model import Model
 from speedrunners import SpeedRunnersEnv
-from time import time
 
 class ModelRunner(PyKeyboardEvent):
     """
@@ -157,27 +156,7 @@ if(__name__ == "__main__"):
     batch_size = 10
     il_weight = 1.0
     model_args = (state_space, act_n, batch_size, il_weight, device)
-    model = Model2(*model_args).to(torch.device(device))
+    model = Model(*model_args).to(torch.device(device))
 
     model_runner = ModelRunner(model)
     model_runner.start()
-
-"""
-if(__name__ == "__main__"):
-    model = Model()
-
-    window_size, playing_config, speedrunners_config = read_config()
-
-    window_size = (int(window_size["WIDTH"]), int(window_size["HEIGHT"]),
-                   int(window_size["DEPTH"]))
-
-    speedrunners_size = (int(speedrunners_config["WIDTH"]),
-                         int(speedrunners_config["HEIGHT"]))
-    screen_viewer = ScreenViewer(speedrunners_size, window_size)
-
-    actor = Actor()
-    load_path = "./Trained Models/model-15.torch"
-    cuda = False
-
-    run_model(model, screen_viewer, actor, load_path, cuda)
-"""
