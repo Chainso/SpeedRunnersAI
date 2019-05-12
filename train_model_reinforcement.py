@@ -209,7 +209,7 @@ class ModelTrainer(PyKeyboardEvent):
         return (config["Window Size"], config["Playing"],
                 config["SpeedRunners Config"])
 
-def train_model(model, data_handler, epochs, batch_size, save_path):
+def train_model(model, data_handler, epochs, batch_size, save_path, cuda):
     model = model.train()
 
     for epoch in range(1, epochs + 1):
@@ -234,18 +234,33 @@ def train_model(model, data_handler, epochs, batch_size, save_path):
         # Save the model
         model.save(save_path + "/model-" + str(epoch) + ".torch")
 
+def model_config():
+    """
+    Reads the config file to obtain the settings for the recorder, the
+    window size for the training data and the game bindings
+    """
+    config = ConfigParser()
+
+    # Read the config file, make sure not to re-name
+    config.read("config.ini")
+
+    return config["Window Size"]
+
 if(__name__ == "__main__"):
     """
     TODO
 
     Use the il_weight to mix reinforcement learning with imitation learning
     """
-    cuda = False
+    cuda = torch.cuda.is_avaliable()
     device = "cuda" if cuda else "cpu"
 
-    #model = Model(device)
+    window_size = model_config()
 
-    state_space = (128, 128, 1)
+    state_space =  (int(window_size["WIDTH"]),
+                    int(window_size["HEIGHT"]),
+                    int(window_size["DEPTH"]))
+
     act_n = 7
     batch_size = 10
     sequence_length = 15
