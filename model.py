@@ -31,7 +31,7 @@ class Model(nn.Module):
                 nn.Dropout(p = 0.5)
                 )
 
-        self.lstm = LSTM(self.batch_size, 256, 256, 1)
+        self.lstm = LSTM(self.batch_size, device, 256, 256, 1)
         self.lstm_dropout = nn.Dropout(p = 0.5)
 
         self.policy = nn.Sequential(
@@ -131,7 +131,7 @@ class Model(nn.Module):
         policy_loss.backward()
         self.optimizer.step()
 
-        return policy_loss.detach().numpy()
+        return policy_loss.cpu().detach().numpy()
 
     def train_reinforce(self, rollouts):
         self.lstm.reset_hidden()
@@ -157,7 +157,7 @@ class Model(nn.Module):
         loss.backward()
         self.optimizer.step()
 
-        return loss.detach().item()
+        return loss.item()
 
     def reset_hidden_state(self):
         """

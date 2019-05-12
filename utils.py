@@ -38,7 +38,7 @@ class GaussianNoise(nn.Module):
         return inp + noise
 
 class LSTM(nn.LSTM):
-    def __init__(self, minibatch_size, *args, **kwargs):
+    def __init__(self, minibatch_size, device, *args, **kwargs):
         """
         Creates an LSTM with the given arguments. The arguments and dictionary
         of arguments are the same as the ones in PyTorch's nn.LSTM module
@@ -53,6 +53,9 @@ class LSTM(nn.LSTM):
         # Get the minibatch size
         self.minibatch_size = minibatch_size
 
+        # Get the device of the hidden layers
+        self.device = device
+
         # Create the hidden layer with 0 initialization
         self.hidden_layers = [torch.zeros(self.num_layers,
                                           self.minibatch_size,
@@ -60,6 +63,9 @@ class LSTM(nn.LSTM):
                               torch.zeros(self.num_layers,
                                           self.minibatch_size,
                                           self.hidden_size)]
+
+        self.hidden_layers = [h.to(torch.device(self.device))
+                                for h in self.hidden_layers]
 
     def forward(self, inp):
         """
@@ -75,7 +81,8 @@ class LSTM(nn.LSTM):
         out, hidden = nn.LSTM.forward(self, inp, hidden)
 
         # Set the new hidden state
-        self.hidden_layers = [h.detach() for h in hidden]
+        self.hidden_layers = [h.detach().to(torch.device(self.device))
+                                for h in hidden]
 
         return out
 
@@ -83,9 +90,12 @@ class LSTM(nn.LSTM):
         """
         Resets the hidden state of the network to 0
         """
-        self.hidden_layers = (torch.zeros(self.num_layers,
+        self.hidden_layers = [torch.zeros(self.num_layers,
                                           self.minibatch_size,
                                           self.hidden_size),
                               torch.zeros(self.num_layers,
                                           self.minibatch_size,
-                                          self.hidden_size))
+                                          self.hidden_size)]
+
+        self.hidden_layers = [h.to(torch.device(self.device))
+                                for h in self.hidden_layers]

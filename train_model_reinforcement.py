@@ -281,4 +281,3 @@ if(__name__ == "__main__"):
     trainer = ModelTrainer(model, data_handler, episodes, batch_size,
                            sequence_length, decay, save_interval, load_path)
     trainer.run()
-
