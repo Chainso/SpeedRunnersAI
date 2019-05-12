@@ -42,9 +42,9 @@ class HDF5Handler():
                                                                *screen_size),
                                                    dtype = "i8")
 
-            self.actions = self.file.create_dataset("actions", (0, 6),
-                                                    chunks = (chunk_size, 6),
-                                                    maxshape = (None, 6))
+            self.actions = self.file.create_dataset("actions", (0, 7),
+                                                    chunks = (chunk_size, 7),
+                                                    maxshape = (None, 7))
         else:
             self.states = self.file["states"]
             self.actions = self.file["actions"]
@@ -66,7 +66,6 @@ class HDF5Handler():
     def add(self, states, actions):
         """
         Adds the given states, actions and directions to the dataset
-
         states : The states to add to the dataset
         actions : The actions to add to the dataset
         """
@@ -88,6 +87,7 @@ class HDF5Handler():
         Closes the file
         """
         print("Dataset size:", str(len(self)))
+        self.file.flush()
         self.file.close()
 
     def read_config(self):

@@ -145,13 +145,30 @@ class ModelRunner(PyKeyboardEvent):
         return (config["Window Size"], config["Playing"],
                 config["SpeedRunners Config"])
 
+def model_config():
+    """
+    Reads the config file to obtain the settings for the recorder, the
+    window size for the training data and the game bindings
+    """
+    config = ConfigParser()
+
+    # Read the config file, make sure not to re-name
+    config.read("config.ini")
+
+    return config["Window Size"]
+
 if(__name__ == "__main__"):
-    cuda = False
+    cuda = torch.cuda.is_available()
     device = "cuda" if cuda else "cpu"
 
     load_path = "./Trained Models/model-100.torch"
 
-    state_space = (128, 128, 1)
+    window_size = model_config()
+
+    state_space =  (int(window_size["WIDTH"]),
+                    int(window_size["HEIGHT"]),
+                    int(window_size["DEPTH"]))
+
     act_n = 7
     batch_size = 10
     il_weight = 1.0

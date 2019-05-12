@@ -1,12 +1,13 @@
 import numpy as np
 
-from hdf5_handler2 import HDF5Handler
+from hdf5_handler import HDF5Handler
 from speedrunners import SpeedRunnersEnv
 
 from collections import OrderedDict
 from threading import Thread
 from configparser import ConfigParser
 from pykeyboard import PyKeyboardEvent
+from time import time
 
 class Recorder(PyKeyboardEvent):
     """
@@ -76,6 +77,7 @@ class Recorder(PyKeyboardEvent):
 
             # Record the keys and game frames while recording is enabled
             while(self.recording):
+                start = time()
                 # Get the state and current action
                 state = self.sr_game.sv.GetNewScreen()
                 self.sr_game.sv.set_polled()
@@ -101,6 +103,7 @@ class Recorder(PyKeyboardEvent):
                     states = []
                     actions = []
                     save_counter = 0
+                print(time() - start)
 
     def run(self):
         """
