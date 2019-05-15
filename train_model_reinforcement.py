@@ -272,7 +272,7 @@ if(__name__ == "__main__"):
     print("Dataset size:", len(data_handler))
     episodes = 100
     decay = 0.99
-    save_interval = 1
+    save_interval = 10
 
     save_path = "./Trained Models/"
     load_path = save_path + "mail-1.torch"

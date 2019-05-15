@@ -5,7 +5,8 @@ from configparser import ConfigParser
 from model import Model
 from hdf5_handler import HDF5Handler
 
-def train_model(model, data_handler, epochs, batch_size, save_path, cuda):
+def train_model(model, data_handler, epochs, batch_size, sequence_length,
+                save_path, save_interval, cuda):
     model = model.train()
 
     for epoch in range(1, epochs + 1):
@@ -17,8 +18,11 @@ def train_model(model, data_handler, epochs, batch_size, save_path, cuda):
 
         for index in range(0, len(data_handler), batch_size):
             # Get the next batch of states and actions
-            states = data_handler.get_states(index, index + batch_size, cuda)
-            actions = data_handler.get_actions(index, index + batch_size, cuda)
+            states, actions = data_handler.sequenced_sample(batch_size,
+                                                            sequence_length,
+                                                            cuda)
+            #states = data_handler.get_states(index, index + batch_size, cuda)
+            #actions = data_handler.get_actions(index, index + batch_size, cuda)
 
             # Compute the losses
             avg_loss += (model.train_supervised(states, actions)
@@ -53,7 +57,8 @@ if(__name__ == "__main__"):
                     int(window_size["DEPTH"]))
 
     act_n = 7
-    batch_size = 1
+    batch_size = 10
+    sequence_length = 15
     il_weight = 1.0
     model_args = (state_space, act_n, batch_size, il_weight, device)
     model = Model(*model_args).to(torch.device(device))
@@ -62,10 +67,11 @@ if(__name__ == "__main__"):
     print("Dataset size:", len(data_handler))
 
     epochs = 100
-    full_rollout_length = batch_size * 15
 
     save_path = "./Trained Models/"
     load_path = save_path + "model-1.torch"
+    save_interval = 10
+
     #model.load(load_path)
-    train_model(model, data_handler, epochs, full_rollout_length, save_path,
-                cuda)
+    train_model(model, data_handler, epochs, batch_size, sequence_length,
+                save_path, save_interval, cuda)

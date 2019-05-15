@@ -48,7 +48,6 @@ class ModelRunner(PyKeyboardEvent):
                            int(window_size["DEPTH"]))
 
         self.sr_game = SpeedRunnersEnv(None, game_screen, res_screen_size)
-        self.sr_game.reset()
 
     def _step(self):
         """
@@ -105,6 +104,7 @@ class ModelRunner(PyKeyboardEvent):
 
         # Start the loop if it's the first time starting
         if(not self.listening):
+            self.sr_game.reset()
             self.listening = True
 
             # Create a thread for the main loop
@@ -118,7 +118,7 @@ class ModelRunner(PyKeyboardEvent):
         if(self.playing):
             print("Playing paused")
             self.playing = False
-            self.env.pause()
+            self.sr_game.pause()
 
     def close_program(self):
         """
@@ -155,15 +155,15 @@ def model_config():
     # Read the config file, make sure not to re-name
     config.read("config.ini")
 
-    return config["Window Size"]
+    return config["Window Size"], config["Playing"]
 
 if(__name__ == "__main__"):
     cuda = torch.cuda.is_available()
     device = "cuda" if cuda else "cpu"
 
-    load_path = "./Trained Models/model-100.torch"
+    window_size, playing_config = model_config()
 
-    window_size = model_config()
+    load_path = "./Trained Models/" + playing_config["LOAD_PATH"]
 
     state_space =  (int(window_size["WIDTH"]),
                     int(window_size["HEIGHT"]),
@@ -174,6 +174,7 @@ if(__name__ == "__main__"):
     il_weight = 1.0
     model_args = (state_space, act_n, batch_size, il_weight, device)
     model = Model(*model_args).to(torch.device(device))
+    model.load(load_path)
 
     model_runner = ModelRunner(model)
-    model_runner.start()
+    model_runner.run()
