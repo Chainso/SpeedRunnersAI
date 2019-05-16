@@ -3,6 +3,9 @@ import torch.nn as nn
 
 from utils import LSTM, GaussianNoise
 
+RANDOM_SEED = 999
+torch.manual_seed(RANDOM_SEED)
+
 class Model(nn.Module):
     def __init__(self, state_space, act_n, batch_size, il_weight,
                  device = "cpu"):
