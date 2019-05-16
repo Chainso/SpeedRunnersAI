@@ -163,7 +163,7 @@ if(__name__ == "__main__"):
 
     window_size, playing_config = model_config()
 
-    load_path = "./Trained Models/" + playing_config["LOAD_PATH"]
+    load_path = "./Trained Models/" + playing_config["LOAD_PATH"] + ".torch"
 
     state_space =  (int(window_size["WIDTH"]),
                     int(window_size["HEIGHT"]),

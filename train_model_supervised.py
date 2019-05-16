@@ -44,13 +44,13 @@ def model_config():
     # Read the config file, make sure not to re-name
     config.read("config.ini")
 
-    return config["Window Size"]
+    return config["Window Size"], config["Playing"]
 
 if(__name__ == "__main__"):
     cuda = torch.cuda.is_available()
     device = "cuda" if cuda else "cpu"
 
-    window_size = model_config()
+    window_size, playing = model_config()
 
     state_space =  (int(window_size["WIDTH"]),
                     int(window_size["HEIGHT"]),
@@ -69,7 +69,8 @@ if(__name__ == "__main__"):
     epochs = 100
 
     save_path = "./Trained Models/"
-    load_path = save_path + "model-1.torch"
+    load_path = save_path + playing["LOAD_PATH"] + ".torch"
+
     save_interval = 10
 
     #model.load(load_path)
