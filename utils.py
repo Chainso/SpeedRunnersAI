@@ -74,7 +74,7 @@ class LSTM(nn.LSTM):
         inp : The input to the LSTM module
         """
         # Get the last n hidden just in case
-        hidden = [self.hidden_layers[i][:, -len(inp):, :]
+        hidden = [self.hidden_layers[i][:, -inp.size()[1]:, :]
                   for i in range(len(self.hidden_layers))]
 
         # Get the output and new hiddens state

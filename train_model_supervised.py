@@ -59,8 +59,8 @@ if(__name__ == "__main__"):
                     int(window_size["DEPTH"]))
 
     act_n = 7
-    batch_size = 10
-    sequence_length = 15
+    batch_size = 30
+    sequence_length = 5
     il_weight = 1.0
     model_args = (state_space, act_n, batch_size, il_weight, device)
     model = Model(*model_args).to(torch.device(device))
@@ -77,4 +77,4 @@ if(__name__ == "__main__"):
 
     #model.load(load_path)
     train_model(model, data_handler, epochs, batch_size, sequence_length,
-                save_path, save_interval, cuda)
+                load_path, save_interval, cuda)
