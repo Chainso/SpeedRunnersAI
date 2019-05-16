@@ -73,7 +73,8 @@ class ModelRunner(PyKeyboardEvent):
                 state = torch.FloatTensor([state]).to(self.model.device).permute(0, 3, 2, 1)
                 self.sr_game.sv.set_polled()
 
-                action, policy, value, rnd_reward = self.model.step(state)
+                action, policy, value, rnd_reward = self.model.step(state,
+                                                                    False)
 
                 self.sr_game.step(action)
 

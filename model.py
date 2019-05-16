@@ -90,7 +90,7 @@ class Model(nn.Module):
 
         return actions, policy, value
 
-    def step(self, inp):
+    def step(self, inp, stochastic=True):
         conv = self.conv(inp)
         conv = conv.view(-1, 1024)
 
@@ -103,8 +103,11 @@ class Model(nn.Module):
 
         policy = self.policy(lstm)
 
-        actions = torch.distributions.Bernoulli(policy)
-        actions = actions.sample()
+        if(stochastic):
+            actions = torch.distributions.Bernoulli(policy)
+            actions = actions.sample()
+        else:
+            actions = torch.round(policy)
 
         actions = actions[0].detach().cpu().numpy()
         policy = policy[0].detach().cpu().numpy()
