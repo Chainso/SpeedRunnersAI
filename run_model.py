@@ -153,7 +153,7 @@ def model_config():
     config = ConfigParser()
 
     # Read the config file, make sure not to re-name
-    config.read("config.ini")
+    config.read("config.ini")s
 
     return config["Window Size"], config["Playing"]
 
