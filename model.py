@@ -42,7 +42,7 @@ class Model(nn.Module):
                 nn.Sigmoid()
                 )
 
-        self.noise = GaussianNoise(mean = 0, std = 0.05)
+        self.noise = GaussianNoise(mean = 0, std = 0.02)
 
         self.value = nn.Linear(256, 1)
 
@@ -111,6 +111,7 @@ class Model(nn.Module):
             actions = actions.sample()
         else:
             actions = torch.round(policy)
+            print(actions)
 
         actions = actions[0].detach().cpu().numpy()
         policy = policy[0].detach().cpu().numpy()
