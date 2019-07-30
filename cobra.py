@@ -9,8 +9,10 @@ class COBRA(nn.Module):
         self.encoder = Encoder(state_space, z_dim, batch_size, device)
         self.decoder = Decoder(state_space, z_dim, device)
 
-        self.enc_optim = torch.optim.Adam(self.encoder.parameters(), *optim_params)
-        self.dec_optim = torch.optim.Adam(self.decoder.parameters(), *optim_params)
+        self.enc_optim = torch.optim.Adam(self.encoder.parameters(),
+                                          *optim_params)
+        self.dec_optim = torch.optim.Adam(self.decoder.parameters(),
+                                          *optim_params)
 
     def forward(self, inp):
         pass
