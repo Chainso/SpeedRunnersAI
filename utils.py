@@ -38,7 +38,7 @@ class GaussianNoise(nn.Module):
         return inp + noise
 
 class LSTM(nn.LSTM):
-    def __init__(self, minibatch_size, device, *args, **kwargs):
+    def __init__(self, minibatch_size, *args, **kwargs):
         """
         Creates an LSTM with the given arguments. The arguments and dictionary
         of arguments are the same as the ones in PyTorch's nn.LSTM module
@@ -64,9 +64,6 @@ class LSTM(nn.LSTM):
                                           self.minibatch_size,
                                           self.hidden_size)]
 
-        self.hidden_layers = [h.to(torch.device(self.device))
-                                for h in self.hidden_layers]
-
     def forward(self, inp):
         """
         Runs the input through the LSTM and returns the output
@@ -74,14 +71,14 @@ class LSTM(nn.LSTM):
         inp : The input to the LSTM module
         """
         # Get the last n hidden just in case
-        hidden = [self.hidden_layers[i][:, -inp.size()[1]:, :]
+        hidden = [self.hidden_layers[i][:, -inp.size()[1]:, :].to(inp.device)
                   for i in range(len(self.hidden_layers))]
 
         # Get the output and new hiddens state
         out, hidden = nn.LSTM.forward(self, inp, hidden)
 
         # Set the new hidden state
-        self.hidden_layers = [h.detach().to(torch.device(self.device))
+        self.hidden_layers = [h.detach().to(inp.device)
                                 for h in hidden]
 
         return out

@@ -39,6 +39,24 @@ class Actor():
                         "slide" : one_hot_acts[16]
                         }
 
+        self.cont_actions = {0 : [0, 0, 0, 0, 0, 1, 0],
+                             1 : [0, 0, 0, 1, 0, 1, 0],
+                             2 : [0, 0, 0, 0, 0, 0, 1],
+                             3 : [0, 0, 0, 1, 0, 0, 1],
+                             4 : [1, 0, 0, 0, 0, 1, 0],
+                             5 : [1, 0, 0, 1, 0, 1, 0],
+                             6 : [1, 0, 0, 0, 0, 0, 1],
+                             7 : [1, 0, 0, 1, 0, 0, 1],
+                             8 : [0, 1, 0, 0, 0, 1, 0],
+                             9 : [0, 1, 0, 1, 0, 1, 0],
+                             10 : [0, 1, 0, 0, 0, 0, 1],
+                             11 : [0, 1, 0, 1, 0, 0, 1],
+                             12 : [0, 0, 1, 0, 0, 1, 0],
+                             13 : [0, 0, 1, 1, 0, 1, 0],
+                             14 : [0, 0, 1, 0, 0, 0, 1],
+                             15 : [0, 0, 1, 1, 0, 0, 1],
+                             16 : [0, 0, 0, 0, 1, 0, 0],
+                            }
         # The current values of the actions and the corresponding function
         self.action_values = [(self.speedrunners["JUMP"], 0),
                               (self.speedrunners["GRAPPLE"], 0),
@@ -53,14 +71,13 @@ class Actor():
         self.action_values = OrderedDict(self.action_values)
         self.action_values_items = list(self.action_values.items())
 
-
-
     def act(self, actions):
         """
         Causes the actor to act based on the actions given
 
         action : The actions for the actor to perform, a (6,) size array
         """
+        actions = self.cont_actions[actions]
         for i in range(len(actions)):
             # Get the value of the action
             value = actions[i]
@@ -170,7 +187,7 @@ class Actor():
         else:
             if(action[5]):
                 key += "left"
-            elif(action[6]):
+            else:
                 key += "right"
 
             if(action[0]):
@@ -182,6 +199,8 @@ class Actor():
 
             if(action[3]):
                 key += "_boost"
+
+        return self.actions[key]
 
     def num_actions(self):
         """

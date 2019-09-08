@@ -38,15 +38,14 @@ class Model(nn.Module):
         self.lstm_dropout = nn.Dropout(p = 0.2)
 
         self.policy = nn.Sequential(
-                nn.Linear(256, act_n),
-                nn.Sigmoid()
+                nn.Linear(256, act_n)
                 )
 
         self.noise = GaussianNoise(mean = 0, std = 0.02)
 
         self.value = nn.Linear(256, 1)
 
-        self.bce_loss = nn.BCELoss(reduction = "none")
+        self.loss = nn.CrossEntropyLoss(reduction = "none")
         self.mse_loss = nn.MSELoss()
 
         self.optimizer = torch.optim.Adam(self.parameters(), lr = 1e-4)
@@ -86,7 +85,8 @@ class Model(nn.Module):
 
         policy = self.policy(lstm)
 
-        actions = torch.distributions.Categorical(policy)
+        actions = nn.Softmax(-1)(policy)
+        actions = torch.distributions.Categorical(actions)
         actions = actions.sample()
 
         value = self.value(lstm)
@@ -106,15 +106,11 @@ class Model(nn.Module):
 
         policy = self.policy(lstm)
 
-        if(stochastic):
-            actions = torch.distributions.Bernoulli(policy)
-            actions = actions.sample()
-        else:
-            print(policy)
-            actions = torch.round(policy)
+        actions = nn.Softmax(-1)(policy)
+        actions = torch.distributions.Categorical(actions)
+        actions = actions.sample()
 
-
-        actions = actions[0].detach().cpu().numpy()
+        actions = actions[0].detach().item()
         policy = policy[0].detach().cpu().numpy()
 
         value = self.value(lstm)
@@ -126,16 +122,16 @@ class Model(nn.Module):
         return actions, policy, value, rnd_reward
 
     def train_supervised(self, states, actions):
+        self.optimizer.zero_grad()
         states = self.noise(states)
 
         self.lstm.reset_hidden()
 
         new_acts, policy, value = self(states)
 
-        policy_loss = self.il_weight * self.bce_loss(policy, actions)
+        policy_loss = self.il_weight * self.loss(policy, actions.argmax(1))
         policy_loss = policy_loss.mean()
 
-        self.optimizer.zero_grad()
         policy_loss.backward()
         self.optimizer.step()
 
@@ -151,7 +147,7 @@ class Model(nn.Module):
 
         actions, policy, value = self(states)
 
-        policy_loss = advs.unsqueeze(1) * self.bce_loss(policy, acts)
+        policy_loss = advs.unsqueeze(1) * self.loss(policy, acts.argmax(1))
         policy_loss = policy_loss.mean()
 
         value_loss = self.mse_loss(value, rewards.unsqueeze(1))

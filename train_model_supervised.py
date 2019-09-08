@@ -58,7 +58,7 @@ if(__name__ == "__main__"):
                     int(window_size["HEIGHT"]),
                     int(window_size["DEPTH"]))
 
-    act_n = 7
+    act_n = 17
     batch_size = 10
     sequence_length = 5
     il_weight = 1.0
