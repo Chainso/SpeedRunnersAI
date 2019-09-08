@@ -122,7 +122,8 @@ class Actor():
         """
         Resets the game.
         """
-        self.keyboard.tap_key(self._reset)
+        # Tap not working
+        self.keyboard.press_key(self._reset)
         
         self.release_keys()
 

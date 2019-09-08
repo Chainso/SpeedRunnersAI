@@ -59,7 +59,7 @@ if(__name__ == "__main__"):
                     int(window_size["DEPTH"]))
 
     act_n = 7
-    batch_size = 10
+    batch_size = 60
     sequence_length = 5
     il_weight = 1.0
     model_args = (state_space, act_n, batch_size, il_weight, device)

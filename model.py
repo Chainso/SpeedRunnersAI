@@ -110,7 +110,7 @@ class Model(nn.Module):
             actions = torch.distributions.Bernoulli(policy)
             actions = actions.sample()
         else:
-            print(policy)
+            #print(policy)
             actions = torch.round(policy)
 
 
