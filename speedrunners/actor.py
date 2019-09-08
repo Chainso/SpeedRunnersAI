@@ -1,3 +1,5 @@
+import numpy as np
+
 from pykeyboard import PyKeyboard
 from collections import OrderedDict
 from configparser import ConfigParser
@@ -16,6 +18,27 @@ class Actor():
         if(self.speedrunners["BOOST"] == ""):
             self.speedrunners["BOOST"] = " "
 
+        one_hot_acts = np.eye(17)
+
+        self.actions = {"left" : one_hot_acts[0],
+                        "left_boost" : one_hot_acts[1],
+                        "right" : one_hot_acts[2],
+                        "right_boost" : one_hot_acts[3],
+                        "left_jump" : one_hot_acts[4],
+                        "left_jump_boost" : one_hot_acts[5],
+                        "right_jump" : one_hot_acts[6],
+                        "right_jump_boost" : one_hot_acts[7],
+                        "left_grapple" : one_hot_acts[8],
+                        "left_grapple_boost" : one_hot_acts[9],
+                        "right_grapple" : one_hot_acts[10],
+                        "right_grapple_boost" : one_hot_acts[11],
+                        "left_item" : one_hot_acts[12],
+                        "left_item_boost" : one_hot_acts[13],
+                        "right_item" : one_hot_acts[14],
+                        "right_item_boost" : one_hot_acts[15],
+                        "slide" : one_hot_acts[16]
+                        }
+
         # The current values of the actions and the corresponding function
         self.action_values = [(self.speedrunners["JUMP"], 0),
                               (self.speedrunners["GRAPPLE"], 0),
@@ -29,6 +52,8 @@ class Actor():
 
         self.action_values = OrderedDict(self.action_values)
         self.action_values_items = list(self.action_values.items())
+
+
 
     def act(self, actions):
         """
@@ -132,11 +157,37 @@ class Actor():
         """
         self.release_keys()
 
+    def continuous_to_discrete(self, action):
+        """
+        Converts an array of actions in the continuous form to a discrete action
+
+        action : The action to convert
+        """
+        key = ""
+
+        if(action[4]):
+            key = "slide"
+        else:
+            if(action[5]):
+                key += "left"
+            elif(action[6]):
+                key += "right"
+
+            if(action[0]):
+                key += "_jump"
+            elif(action[1]):
+                key += "_grapple"
+            elif(action[2]):
+                key += "_item"
+
+            if(action[3]):
+                key += "_boost"
+
     def num_actions(self):
         """
         Returns the number of actions the actor can take.
         """
-        return len(self.action_values)
+        return len(self.actions)
 
     def read_config(self):
         """

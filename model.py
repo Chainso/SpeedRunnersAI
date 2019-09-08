@@ -86,7 +86,7 @@ class Model(nn.Module):
 
         policy = self.policy(lstm)
 
-        actions = torch.distributions.Bernoulli(policy)
+        actions = torch.distributions.Categorical(policy)
         actions = actions.sample()
 
         value = self.value(lstm)
