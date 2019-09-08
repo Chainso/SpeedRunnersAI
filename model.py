@@ -35,7 +35,7 @@ class Model(nn.Module):
                 )
 
         self.lstm = LSTM(self.batch_size, device, 256, 256, 1)
-        self.lstm_dropout = nn.Dropout(p = 0.5)
+        self.lstm_dropout = nn.Dropout(p = 0.2)
 
         self.policy = nn.Sequential(
                 nn.Linear(256, act_n),
@@ -61,7 +61,7 @@ class Model(nn.Module):
         return nn.Sequential(
                 self._conv_no_dropout(filt_in, filt_out, kernel, stride,
                                       padding),
-                nn.Dropout(p = 0.6)
+                nn.Dropout(p = 0.2),
                 )
 
     def _rnd_net(self, state_space):
@@ -110,8 +110,9 @@ class Model(nn.Module):
             actions = torch.distributions.Bernoulli(policy)
             actions = actions.sample()
         else:
+            print(policy)
             actions = torch.round(policy)
-            print(actions)
+
 
         actions = actions[0].detach().cpu().numpy()
         policy = policy[0].detach().cpu().numpy()

@@ -156,12 +156,9 @@ class HDF5Handler():
         actions = np.stack(actions)
 
         # Convert to PyTorch tensor
-        if(cuda):
-            states = torch.cuda.FloatTensor(states).permute(0, 1, 4, 2, 3)
-            actions = torch.cuda.FloatTensor(actions)
-        else:
-            states = torch.FloatTensor(states).permute(0, 1, 4, 2, 3)
-            actions = torch.FloatTensor(actions)
+        device = torch.device("cuda" if cuda else "cpu")
+        states = torch.FloatTensor(states).permute(0, 1, 4, 2, 3).to(device)
+        actions = torch.FloatTensor(actions).to(device)
 
         return states, actions
 

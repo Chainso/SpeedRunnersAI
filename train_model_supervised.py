@@ -28,7 +28,7 @@ def train_model(model, data_handler, epochs, batch_size, sequence_length,
                                   
             # Compute the losses
             avg_loss += (model.train_supervised(states, actions)
-                         * (batch_size /len(data_handler)))
+                         * (batch_size / len(data_handler)))
 
         # Print the average loss
         print("Epoch ", epoch, ": loss", avg_loss)
@@ -59,7 +59,7 @@ if(__name__ == "__main__"):
                     int(window_size["DEPTH"]))
 
     act_n = 7
-    batch_size = 30
+    batch_size = 10
     sequence_length = 5
     il_weight = 1.0
     model_args = (state_space, act_n, batch_size, il_weight, device)

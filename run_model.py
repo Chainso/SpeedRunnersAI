@@ -66,12 +66,11 @@ class ModelRunner(PyKeyboardEvent):
         Ensures that the program will continue listening until closure
         """
         while(self.listening):
-            # Record the keys and game frames while recording is enabled
+            # Record the keys and gamej frames while recording is enabled
             while(self.playing):
                 # Get the state and current action
-                state = self.sr_game.sv.GetNewScreen()
+                state = self.sr_game.state
                 state = torch.FloatTensor([state]).to(self.model.device).permute(0, 3, 2, 1)
-                self.sr_game.sv.set_polled()
 
                 action, policy, value, rnd_reward = self.model.step(state,
                                                                     False)
@@ -176,6 +175,7 @@ if(__name__ == "__main__"):
     model_args = (state_space, act_n, batch_size, il_weight, device)
     model = Model(*model_args).to(torch.device(device))
     model.load(load_path)
+    model = model.eval()
 
     model_runner = ModelRunner(model)
     model_runner.run()
