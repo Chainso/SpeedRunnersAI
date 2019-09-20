@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from utils import LSTM, GaussianNoise
+from utils import LSTM, NoisyLinear, QuantileLayer
 
 RANDOM_SEED = 999
 torch.manual_seed(RANDOM_SEED)
@@ -11,6 +11,10 @@ np.random.seed(RANDOM_SEED)
 class Model(nn.Module):
     """
     Recurrent IQN with R2D3 features
+
+    IQN: https://arxiv.org/pdf/1806.06923.pdf
+    R2D2: https://openreview.net/pdf?id=r1lyTjAqYX
+    R2D3: https://arxiv.org/abs/1909.01387
     """
     def __init__(self, state_space, act_n, quantile_dim, hidden_dim,
                  num_hidden):
@@ -20,58 +24,51 @@ class Model(nn.Module):
         self.act_n = act_n
         self.quantile_dim = quantile_dim
 
+        self.conv = ConvNet(state_space[-1], 32, lambda x: 2 * x)
+
+        self.lstm = nn.LSTM(256, quantile_dim)
         # If input size is 256 after CNN
-        self.quantile_fc = nn.Sequential(
-            nn.Linear(quantile_dim, 256),
-            nn.ReLU()
+        self.quantile_layer = QuantileLayer(quantile_dim, hidden_dim)
+
+        self.advantage = nn.Seqential(
+            NoisyLinear(hidden_dim, hidden_dim, 0, 0.05),
+            nn.ReLU(-1),
+            NoisyLinear(hidden_dim, act_n, 0, 0.05)
         )
 
-        fcs = [self._fc_layer(256, hidden_dim)]
-        fcs += [self.fc_layer(hidden_dim, hidden_dim)
-                for i in range(num_hidden - 1)]
-
-        self.fc = nn.Sequential(
-            *fcs,
-            nn.Linear(hidden_dim, act_n),
-            nn.Softmax(-1)
+        self.advantage = nn.Seqential(
+            NoisyLinear(hidden_dim, hidden_dim, 0, 0.05),
+            nn.ReLU(-1),
+            NoisyLinear(hidden_dim, 1, 0, 0.05)
         )
 
-    def _fc_layer(self, input_dim, output_dim):
-        return nn.Sequential(
-            nn.Linear(input_dim, output_dim),
-            nn.ReLU()
-        )
+    def step(self, state, num_quantiles=32, greedy=False):
+        q_vals, quantile_values, quantiles = self(state, num_quantiles)
 
-    def forward(self, state, num_quantile_samples):
+        if(greedy):
+            action = q_vals.max(1)
+        else:
+            action = nn.Categorical(logits = q_vals)
+            action = action.sample()
+
+        action = action.item()
+
+        return action
+
+    def forward(self, state, num_quantiles=32):
         """
         Returns the quantile values and quantiles for the given state
         """
-        quantiles = torch.rand(num_quantile_samples * len(state),
-                               device = state.device)
-        quantile_dist = quantiles.repeat(1, self.quantile_dim)
+        cnn = cnn.view(len(state), -1)
 
-        qrange = torch.range(0, self.quantile_dim, device = state.device)
+        quantile_values, quantiles = self.quantile_layer(cnn, num_quantiles)
 
-        quantile_dist = qrange * np.pi * quantile_dist
-        quantile_dist = torch.cos(quantile_dist)
-        quantile_dist = self.quantile_fc(quantile_dist)
+        advantage = self.advantage(quantile_values)
+        value = self.value(quantile_values)
 
-        rep_state = state.repeat(num_quantile_samples, 1)
-        quantile_dist = rep_state * quantile_dist
+        q_vals = value + advantage - advantage.mean(1, keepdim=True)
 
-        quantile_values = self.fc(quantile_dist)
-        quantile_values = quantile_values.view(num_quantile_samples,
-                                               len(state), self.act_n)
-
-        q_vals = quantile_values.mean(0)
-
-        return quantile_values, quantiles, q_vals
-
-    def reset_hidden_state(self):
-        """
-        Resets the hidden state for the LSTM
-        """
-        self.lstm.reset_hidden()
+        return q_vals, quantile_values, quantiles
 
     def train_batch(rollouts):
         states, actions, rewards, next_states, terminals = rollouts
@@ -92,3 +89,29 @@ class Model(nn.Module):
         load_path : The of the model to load
         """
         self.load_state_dict(torch.load(load_path))
+
+class ConvNet(nn.Module):
+    def __init__(self, inp_channels, init_channels, growth_func):
+        nn.Module.__init__(self)
+
+        num_layers = 4
+        hidden_channels = [init_channels]
+        for i in range(num_layers - 1):
+            hidden_channels.append(growth_func(hidden_channels[-1]))
+
+        self.convs = nn.Sequential(
+            self._conv_layer(inp_channels, hidden_channels[0], 5, 2, 0),
+            self._conv_layer(inp_channels, hidden_channels[0], 3, 2, 0),
+            self._conv_layer(inp_channels, hidden_channels[0], 3, 2, 0),
+            self._conv_layer(inp_channels, hidden_channels[0], 3, 1, 0),
+        )
+
+    def _conv_layer(self, in_channels, out_channels, kernel_size, stride,
+                    padding):
+        return nn.Sequential(
+            nn.Conv2D(in_channels, out_channels, kernel_size, stride, padding),
+            nn.ReLU(-1)
+        )
+
+    def forward(self, inp):
+        return self.convs(inp)
