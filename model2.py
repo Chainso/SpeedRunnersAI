@@ -23,7 +23,8 @@ class IQN(nn.Module):
         """
         nn.Module.__init__(self)
 
-        self.online = Model(state_space, act_n, quantile_dim, hidden_dim)
+        self.online = Model(state_space, act_n, quantile_dim, num_quantiles,
+                            hidden_dim, num_hidden)
         self.target = deepcopy(self.online)
 
         self.loss_func = nn.SmoothL1Loss(reduction="mean")
