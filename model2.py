@@ -38,7 +38,12 @@ class IQN(nn.Module):
         """
         return self.online.step(state, greedy)
 
-    def train_batch(self, rollouts):
+    def train_batch(self, rollouts, burn_in_length, sequence_length):
+        """
+        Trains for a batch of rollouts with the given burn in length and
+        training sequence length
+        """
+        # Add burn in
         self.optim.zero_grad()
 
         states, actions, rewards, next_states, terminals, hidden_state = rollouts
@@ -69,6 +74,38 @@ class IQN(nn.Module):
 
         return meaned_loss, loss
 
+    def train(self, num_batches, batch_size, burn_in_length, sequence_length,
+              online_replay_buffer=None, supervised_replay_buffer=None,
+              supervised_chance=0.25, writer=None):
+        """
+        Trains R2D3 style with 2 replay buffers
+        """
+        assert not online_replay_buffer == supervised_replay_buffer == None
+
+        for batch in range(1, num_batches + 1):
+            buff_choice = np.rand()
+            if(online_replay_buffer is None or buff_choice < supervised_chance):
+                replay_buffer = supervised_replay_buffer
+            else:
+                replay_buffer = online_replay_buffer
+
+            while(not replay_buffer.ready_to_sample(batch_size)):
+                pass
+
+            rollouts, idxs, is_weights = replay_buffer.sample(batch_size)
+
+            loss, new_errors = self.train_batch(rollouts, burn_in_length,
+                                                sequence_length)
+            replay_buffer.update_priorities(new_errors, idxs)
+
+            if(writer is not None):
+                if(buff_choice < supervised_chance):
+                    writer.add_summary("Supervised Loss", loss, batch)
+                else:
+                    writer.add_summary("Online Loss", loss, batch)
+
+                writer.add_summary("Loss", loss, batch)
+
     def update_target(self):
         """
         Updates the target network
@@ -80,7 +117,7 @@ class Model(nn.Module):
     Recurrent IQN with R2D3 features
     """
     def __init__(self, state_space, act_n, quantile_dim, num_quantiles,
-                 hidden_dim, num_hidden):
+                 hidden_dim, num_hidden): # NUM HIDDEN NOT IN USE CURRENTLY
         nn.Module.__init__(self)
 
         self.state_space = state_space
