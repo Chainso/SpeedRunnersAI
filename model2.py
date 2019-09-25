@@ -44,12 +44,13 @@ class IQN(nn.Module):
         Trains for a batch of rollouts with the given burn in length and
         training sequence length
         """
-        # Add burn in
         self.optim.zero_grad()
 
         states, actions, rewards, next_states, terminals, hidden_state = rollouts
 
-        next_q_vals, next_quantile_vals, next_quantiles = self.target(next_states)
+        # Add burn in here #######
+        
+        next_q_vals, next_quantile_vals, next_quantiles, next_hidden = self.target(next_states)
         num_quantiles = next_quantile_vals[1]
 
         next_actions = next_quantile_vals.argmax(-1, keepdim=1)
@@ -125,10 +126,12 @@ class Model(nn.Module):
         self.act_n = act_n
         self.quantile_dim = quantile_dim
         self.num_quantiles = num_quantiles
+        self.hidden_dim = hidden_dim
 
         self.conv = ConvNet(state_space[-1], 32, lambda x: 2 * x)
 
         self.lstm = nn.LSTM(256, quantile_dim)
+
         # If input size is 256 after CNN
         self.quantile_layer = QuantileLayer(quantile_dim, hidden_dim)
 
@@ -144,8 +147,9 @@ class Model(nn.Module):
             NoisyLinear(hidden_dim, 1, 0, 0.05)
         )
 
-    def step(self, state, greedy=False):
-        q_vals, quantile_values, quantiles = self(state)
+    def step(self, state, hidden_state=None, greedy=False):
+        q_vals, quantile_values, quantiles, hidden_state = self(state,
+                                                                hidden_state)
 
         if(greedy):
             action = q_vals.max(1)
@@ -155,15 +159,20 @@ class Model(nn.Module):
 
         action = action.item()
 
-        return action
+        return action, hidden_state
 
-    def forward(self, state):
+    def forward(self, state, hidden_state=None):
         """
         Returns the quantile values and quantiles for the given state
         """
-        cnn = cnn.view(len(state), -1)
+        if(hidden_state is None):
+            hidden_state = tuple([torch.zeros(1, len(state), self.hidden_dim)
+                                  for i in range(2)])
 
-        quantile_values, quantiles = self.quantile_layer(cnn,
+        cnn = cnn.view(len(state), -1)
+        lstm, hidden_state = self.LSTM(state, hidden_state)
+
+        quantile_values, quantiles = self.quantile_layer(lstm,
                                                          self.num_quantiles)
 
         advantage = self.advantage(quantile_values)
@@ -171,7 +180,7 @@ class Model(nn.Module):
 
         q_vals = value + advantage - advantage.mean(-1, keepdim=True).mean(1)
 
-        return q_vals, quantile_values, quantiles
+        return q_vals, quantile_values, quantiles, hidden_state
 
     def save(self, save_path):
         """
