@@ -171,6 +171,17 @@ class PERMemory:
         priority = self._get_priority(error)
         self.priorities.add(priority)
 
+    def add_batch(self, experiences, errors):
+        """
+        Adds a batch of experiences with the priority given by the corresponding
+        batch of errors
+
+        experiences : The experiences to add
+        errors : The errors used for the priority
+        """
+        for experience, error in zip(experiences, errors):
+            self.add(experience, error)
+
     def sample(self, size):
         """
         Samples "size" number of experiences from the buffer
