@@ -98,7 +98,7 @@ class HDF5Handler():
         config = ConfigParser()
 
         # Read the config file, make sure not to re-name
-        config.read("config.ini")
+        config.read("../config/config.ini")
 
         return config["Training"], config["Window Size"]
 
