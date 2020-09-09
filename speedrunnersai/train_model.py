@@ -151,7 +151,7 @@ class ModelTrainer(PyKeyboardEvent):
         config = ConfigParser()
     
         # Read the config file, make sure not to re-name
-        config.read("../config/config.ini")
+        config.read("./config/config.ini")
 
         return config["Playing"]
 
@@ -188,7 +188,7 @@ def model_config():
     config = ConfigParser()
 
     # Read the config file, make sure not to re-name
-    config.read("../config/config.ini")
+    config.read("./config/config.ini")
 
     return config["Window Size"], config["Training"]
 
