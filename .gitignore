@@ -98,7 +98,15 @@ venv.bak/
 .ropeproject
 
 # mkdocs documentation
-/site
+/sitegit
 
 # mypy
 .mypy_cache/
+
+# Other files
+*.hdf5
+*.torch
+*.code-workspace
+*.project
+*.pydevproject
+*.vscode

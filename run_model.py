@@ -169,7 +169,7 @@ if(__name__ == "__main__"):
                     int(window_size["HEIGHT"]),
                     int(window_size["DEPTH"]))
 
-    act_n = 7
+    act_n = 17
     batch_size = 1
     il_weight = 1.0
     model_args = (state_space, act_n, batch_size, il_weight, device)

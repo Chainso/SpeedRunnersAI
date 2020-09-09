@@ -37,8 +37,26 @@ class GaussianNoise(nn.Module):
 
         return inp + noise
 
+class NoisyLinear(nn.Module):
+    def __init__(self, in_features, out_features, mean=0, std=0.05, bias=True):
+        """
+        Creates a module that adds gaussian noise to its inputs.
+        """
+        nn.Module.__init__(self)
+
+        self.linear = nn.Linear(in_features, out_features, bias)
+        self.noise = GaussianNoise(mean, std)
+
+    def forward(self, inp):
+        lin = self.linear(inp)
+        noise = self.noise(lin)
+
+        out = lin + noise
+
+        return inp + noise
+
 class LSTM(nn.LSTM):
-    def __init__(self, minibatch_size, device, *args, **kwargs):
+    def __init__(self, minibatch_size, *args, **kwargs):
         """
         Creates an LSTM with the given arguments. The arguments and dictionary
         of arguments are the same as the ones in PyTorch's nn.LSTM module
@@ -64,9 +82,6 @@ class LSTM(nn.LSTM):
                                           self.minibatch_size,
                                           self.hidden_size)]
 
-        self.hidden_layers = [h.to(torch.device(self.device))
-                                for h in self.hidden_layers]
-
     def forward(self, inp):
         """
         Runs the input through the LSTM and returns the output
@@ -74,14 +89,14 @@ class LSTM(nn.LSTM):
         inp : The input to the LSTM module
         """
         # Get the last n hidden just in case
-        hidden = [self.hidden_layers[i][:, -inp.size()[1]:, :]
+        hidden = [self.hidden_layers[i][:, -inp.size()[1]:, :].to(inp.device)
                   for i in range(len(self.hidden_layers))]
 
         # Get the output and new hiddens state
         out, hidden = nn.LSTM.forward(self, inp, hidden)
 
         # Set the new hidden state
-        self.hidden_layers = [h.detach().to(torch.device(self.device))
+        self.hidden_layers = [h.detach().to(inp.device)
                                 for h in hidden]
 
         return out
@@ -99,3 +114,31 @@ class LSTM(nn.LSTM):
 
         self.hidden_layers = [h.to(torch.device(self.device))
                                 for h in self.hidden_layers]
+
+class QuantileLayer(nn.Module):
+    def __init__(self, quantile_dim, output_dim):
+        nn.Module.__init__(self)
+
+        self.quantile_fc = nn.Linear(quantile_dim, output_dim)
+        self.relu = nn.ReLU(-1)
+
+    def forward(self, inp, num_quantiles=32):
+        quantiles = torch.rand(self.num_quantiles * len(inp), 1,
+                               device = inp.device)
+        quantile_dist = quantiles.repeat(1, self.quantile_dim)
+
+        qrange = torch.range(1, self.quantile_dim + 1, device = inp.device)
+
+        quantile_dist = qrange * np.pi * quantile_dist
+        quantile_dist = torch.cos(quantile_dist)
+        quantile_dist = self.quantile_fc(quantile_dist)
+        quantile_dist = self.relu(quantile_dist)
+
+        rep_inp = inp.repeat(self.num_quantiles, 1)
+        quantile_dist = rep_inp * quantile_dist
+
+        quantile_values = self.fc(quantile_dist)
+        quantile_values = quantile_values.view(self.num_quantiles,
+                                               len(inp), self.act_n)
+
+        return quantile_values, quantiles
