@@ -26,7 +26,7 @@ class HDF5Handler():
                        int(window_size["DEPTH"]))
 
         # The file path for the HDF5 file
-        self.file_path = ("./Training Data/" + training_config["FILE_NAME"] +
+        self.file_path = ("./data/" + training_config["FILE_NAME"] +
                           ".hdf5")
 
         # The HDF5 file to work with

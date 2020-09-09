@@ -1,6 +1,6 @@
 import h5py
 
-file = h5py.File("./Training Data/training_data.hdf5", "r+")
+file = h5py.File("./data/training_data.hdf5", "r+")
 
 states = file["states"]
 actions = file["actions"]

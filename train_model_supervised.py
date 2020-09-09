@@ -70,7 +70,7 @@ if(__name__ == "__main__"):
 
     epochs = 100
 
-    save_path = "./Trained Models/"
+    save_path = "./models/"
     load_path = save_path + training_conf["SAVE_PATH"]
 
     save_interval = 10

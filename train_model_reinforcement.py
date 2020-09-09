@@ -274,7 +274,7 @@ if(__name__ == "__main__"):
     decay = 0.99
     save_interval = 10
 
-    save_path = "./Trained Models/"
+    save_path = "./models/"
     load_path = save_path + training_conf["SAVE_PATH"]
 
     #model.load(load_path)
