@@ -1,10 +1,12 @@
 import numpy as np
 
 from time import time
+from pymem import Pymem
 
 #from speedrunnersai.speedrunners.screen_viewer import ScreenViewer
 from speedrunnersai.speedrunners.memory_reader import MemoryReader
 from speedrunnersai.speedrunners.actor import Actor
+from speedrunnersai.speedrunners.structures import Address, Player, Match
 
 class SpeedRunnersEnv():
     # The addresses of all the values to get
@@ -17,10 +19,10 @@ class SpeedRunnersEnv():
     offsets = {"obstacles_hit" : [0x0, 0x0, 0x1F6C, 0x8, 0x4]}
 
     def __init__(self, max_time, window_size, res_shape, read_mem = False):
+        self.res_shape = res_shape
         self.actor = Actor()
-        self.sv = ScreenViewer(window_size, res_shape, self._screen_update_hook)
-        #self.memory = MemoryReader("speedrunners.exe") if read_mem else None
-        self.memory = None
+        #self.sv = ScreenViewer(window_size, res_shape, self._screen_update_hook)
+        
         self.max_time = max_time
         self.num_actions = self.actor.num_actions()
 
@@ -29,6 +31,11 @@ class SpeedRunnersEnv():
         self._reward = 0
         self._terminal = False
         self._reached_goal = False
+
+        # Relevant memory information
+        self.memory = Pymem() if read_mem else None
+        self.match = Match()
+        self.match.players.append(Player())
 
         self._last_time = 0
         self.num_obstacles_hit = self._get_obstacles_hit()
@@ -83,6 +90,9 @@ class SpeedRunnersEnv():
         """
         self.sv.Start()
 
+        if self.memory is not None:
+            self.memory.open_process_from_name("speedrunners.exe")
+
     def pause(self):
         """
         Closes the screen viewer.
@@ -97,7 +107,7 @@ class SpeedRunnersEnv():
         self.sv.Stop()
         self.actor.stop()
 
-        if(self.memory is not None):
+        if self.memory is not None:
             self.memory.close_handle()
 
     def step(self, action):
@@ -107,71 +117,67 @@ class SpeedRunnersEnv():
         self.sv.set_polled()
         self.actor.act(action)
         self._state = self.sv.GetNewScreen()
+
+        # Update structures with new memory
+        self._update_memory()
+
         # Dont forget to calculate rewards
         self._episode_finished(False)
 
         return self.state, self.reward, self.terminal
+
+    def _update_memory(self):
+        """
+        Updates match with the new values of the process.
+        """
+        if self.memory is not None:
+            self.match.update(self.memory, 0)
 
     def _get_reward(self):
         """
         Returns the reward for the current state of the environment.
         """
         reward = 0
-        #reward = self._get_speed() / 700
+
+        reward = self.match.players[0].speed() / 700
 
         obst_dif = self._get_obstacles_hit() - self.num_obstacles_hit
 
-        reward -= 0.05 * obst_dif
+        obst_reward = -0.05 * obst_dif
         self.num_obstacles_hit += obst_dif
 
         if(self._reached_goal):
             reward += 10
         elif(self._terminal):
-            reward = 0
+            reward = obst_reward
 
         self._reward = reward
 
-    def _get_x_speed(self):
-        return (self.memory.get_address(self.addresses["x_speed"], c_float)
-                if self.memory is not None else 0)
-
-    def _get_y_speed(self):
-        return (self.memory.get_address(self.addresses["y_speed"], c_float)
-                if self.memory is not None else 0)
-
-    def _get_speed(self):
-        return np.sqrt(np.square(self._get_x_speed()) + 0.75 * np.square(self._get_y_speed()))
-
-    def _get_current_time(self):
-        return (self.memory.get_address(self.addresses["current_time"], c_float)
-                if self.memory is not None else 0)
 
     def _get_obstacles_hit(self):
+        """
         return (self.memory.get_address(self.addresses["obstacles_hit"],
                                         ctypes.c_byte)
                 if self.memory is not None else 0)
+        """
+        return 0
+
 
     def _episode_finished(self, reset = False):
-        """ Uncomment out when the memory reader is finished
         if((self.max_time is not None
-            and self._get_current_time() > self.max_time)
-           or reset):
+            and self.match.current_time > self.max_time)
+            or (self.max_time is not None
+                and (time() - self.start_time) > self.max_time)
+            or reset):
             self._last_time = 0
             self._terminal = True
             self._reached_goal = False
-        """
-        if((self.max_time is not None
-            and (time() - self.start_time) > self.max_time)
-           or reset):
-            self._last_time = 0
-            self._terminal = True
-            self._reached_goal = False
-        elif(self._get_current_time() < self._last_time):
+        elif(self.match.current_time < self._last_time):
             self._last_time = 0
             self._terminal = True
             self._reached_goal = True
         else:
-            self._last_time = self._get_current_time()
+            self._last_time = self.match.current_time
             self._terminal = False
             self._reached_goal = False
 
@@ -183,6 +189,6 @@ class SpeedRunnersEnv():
 
     def action_space(self):
         """
-        Returns the number of concurrent actions the agent can take.
+        Returns the number of actions the agent can take.
         """
         return self.num_actions

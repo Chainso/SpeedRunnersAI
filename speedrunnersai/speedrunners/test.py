@@ -1,6 +1,6 @@
 import pymem
 
-from speedrunnersai.speedrunners.structures import Addresses, Player
+from speedrunnersai.speedrunners.structures import Address, Player
 
 if __name__ == "__main__":
     player = Player()
@@ -12,7 +12,7 @@ if __name__ == "__main__":
         print(module)
     print()
     """
-    player.update(memory, Addresses.BasePlayer.value)
+    player.update(memory, Address.BASE_PLAYER.value)
     print(player)
     print(player.speed())
     memory.close_process()
