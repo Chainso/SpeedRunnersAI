@@ -195,7 +195,7 @@ def model_config():
 if(__name__ == "__main__"):
     from torch.multiprocessing import Process
 
-    from speedrunners.actor import Actor
+    from speedrunnersai.speedrunners.actor import Actor
     from model import IQN
     from per import PERMemory
     # from agent import DQNAgent # Add the agent

@@ -3,7 +3,7 @@ import numpy as np
 from configparser import ConfigParser
 
 from utils import discount
-from speedrunners.sr_env import SpeedRunnersEnv
+from speedrunnersai.speedrunners.sr_env import SpeedRunnersEnv
 
 class Agent():
     def __init__(self, model):

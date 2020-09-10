@@ -2,9 +2,9 @@ import numpy as np
 
 from time import time
 
-from speedrunners.screen_viewer import ScreenViewer
-from speedrunners.memory_reader import MemoryReader
-from speedrunners.actor import Actor
+#from speedrunnersai.speedrunners.screen_viewer import ScreenViewer
+from speedrunnersai.speedrunners.memory_reader import MemoryReader
+from speedrunnersai.speedrunners.actor import Actor
 
 class SpeedRunnersEnv():
     # The addresses of all the values to get
