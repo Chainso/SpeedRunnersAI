@@ -7,8 +7,7 @@ from typing import Tuple, Optional
 from hlrl.core.vision import FrameHandler
 from hlrl.core.vision.transforms import Grayscale, Interpolate
 
-from speedrunnersai.speedrunners.memory_reader import MemoryReader
-from speedrunnersai.speedrunners.actor import Actor
+#from speedrunnersai.speedrunners.actor import Actor
 from speedrunnersai.speedrunners.structures import Address, Player, Match
 
 class SpeedRunnersEnv():
@@ -24,8 +23,13 @@ class SpeedRunnersEnv():
     # The offsets of all the values to get
     offsets = {"obstacles_hit" : [0x0, 0x0, 0x1F6C, 0x8, 0x4]}
 
-    def __init__(self, max_time: float, res_shape: Tuple[int, int, int],
+    def __init__(self,
+        max_time: float,
+        res_shape: Tuple[int, int],
+        grayscale: bool = True,
+        stacked_frames: int = 1,
         window_size: Optional[Tuple[int, int, int, int]] = None,
+        device: str = "cuda",
         read_mem: bool = False):
         """
         Creates the environment.
@@ -33,28 +37,36 @@ class SpeedRunnersEnv():
         Args:
             max_time (float): The maximum amount of time an agent can play
                 before an environment reset.
-            res_shape (Tuple[int, int, int]): The shape to resize the captured
-                images to. If the channel dimension is 1 or less, converts to
-                grayscale.
+            res_shape (Tuple[int, int]): The shape to resize the captured
+                images to.
+            grayscale (bool): Will convert the image to grayscale if true.
+            stacked_frames (int): The number of frames to stack
+                (along channel dimension)
             window_size (Optional[Tuple[int, int, int, int]]): The values of
                 (left, top, right, bottom) to capture.
+            device (str): The device to store tensors on.
             read_mem (bool): If true, will attach to the speedrunners process to
                 read memory values (DO NOT USE ONLINE).
         """
         self.res_shape = res_shape
+        self.stacked_frames = stacked_frames
         self.window_size = window_size
-        self.actor = Actor()
+        #self.actor = Actor()
 
         # Create the d3dshot instance
-        d3d = d3dshot.create(capture_output="pytorch_float_gpu")
+        capture_output = "pytorch_float" + ("_gpu" if device == "cuda" else "")
+        d3d = d3dshot.create(capture_output=capture_output)
 
-        transforms = [Grayscale()] if res_shape[-1] <= 1 else []
-        transforms.append(Interpolate(size=res_shape[:-1], mode="bilinear"))
+        transforms = [Grayscale()] if grayscale else []
+        #transforms.append(Interpolate(size=res_shape, mode="bilinear"))
+
+        #stack_channel = lambda frame: frame.view(1, -1, *frame.shape[2:])
+        #transforms.append(stack_channel)
 
         self.frame_handler = FrameHandler(d3d, transforms=transforms)
         
         self.max_time = max_time
-        self.num_actions = self.actor.num_actions()
+        #self.num_actions = self.actor.num_actions()
 
         # The environment properties
         self._state = None
@@ -74,7 +86,7 @@ class SpeedRunnersEnv():
     @property
     def state(self):
         """
-        The current state of the environment. WIll be None if the environment
+        The current state of the environment. Will be None if the environment
         has not been started.
         """
         return self._state
@@ -106,7 +118,7 @@ class SpeedRunnersEnv():
         """
         Resets the game (in practice).
         """
-        self.actor.reset()
+        #self.actor.reset()
         self._episode_finished(True)
         self.frame_handler.get_new_frame()
         self.start_time = time()
@@ -134,7 +146,7 @@ class SpeedRunnersEnv():
         """
         self.reset()
         self.frame_handler.stop()
-        self.actor.stop()
+        #self.actor.stop()
 
         if self.memory is not None:
             self.memory.close_handle()
@@ -143,9 +155,11 @@ class SpeedRunnersEnv():
         """
         Takes a step into the environment with the action given.
         """
-        self.actor.act(action)
+        #self.actor.act(action)
         self.frame_handler.get_new_frame()
-        self._state = self.frame_handler.get_frame_stack([0], "first")
+        self._state = self.frame_handler.get_frame_stack(
+            range(self.stacked_frames), "first"
+        )
 
         # Update structures with new memory
         self._update_memory()
