@@ -153,7 +153,7 @@ class ModelTrainer(PyKeyboardEvent):
         # Read the config file, make sure not to re-name
         config.read("./config/config.ini")
 
-        return config["Playing"]
+        return config["AI"]
 
 def train_model(model, data_handler, epochs, batch_size, save_path, cuda):
     model = model.train()
@@ -190,7 +190,7 @@ def model_config():
     # Read the config file, make sure not to re-name
     config.read("./config/config.ini")
 
-    return config["Window Size"], config["Training"]
+    return config["Environment"], config["AI"]
 
 if(__name__ == "__main__"):
     from torch.multiprocessing import Process

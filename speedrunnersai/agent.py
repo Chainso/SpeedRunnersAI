@@ -135,4 +135,4 @@ class Agent():
         # Read the config file, make sure not to re-name
         config.read("./config/config.ini")
 
-        return (config["Window Size"], config["SpeedRunners Config"])
+        return (config["Environment"], config["SpeedRunners Config"])

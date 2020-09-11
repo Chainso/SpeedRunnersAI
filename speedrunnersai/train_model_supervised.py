@@ -46,7 +46,7 @@ def model_config():
     # Read the config file, make sure not to re-name
     config.read("./config/config.ini")
 
-    return config["Window Size"], config["Training"]
+    return config["Environment"], config["AI"]
 
 if(__name__ == "__main__"):
     cuda = torch.cuda.is_available()

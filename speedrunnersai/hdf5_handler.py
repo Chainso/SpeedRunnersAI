@@ -100,7 +100,7 @@ class HDF5Handler():
         # Read the config file, make sure not to re-name
         config.read("./config/config.ini")
 
-        return config["Training"], config["Window Size"]
+        return config["AI"], config["Environment"]
 
     def sample(self, num_samples, cuda = False):
         """

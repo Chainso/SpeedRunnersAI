@@ -185,7 +185,7 @@ class Recorder(PyKeyboardEvent):
         # Read the config file, make sure not to re-name
         config.read("./config/config.ini")
 
-        return (config["Recording"], config["Window Size"],
+        return (config["Recording"], config["Environment"],
                 config["SpeedRunners Config"])
 
 if(__name__ == "__main__"):

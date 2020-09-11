@@ -142,7 +142,7 @@ class ModelRunner(PyKeyboardEvent):
         # Read the config file, make sure not to re-name
         config.read("./config/config.ini")
 
-        return (config["Window Size"], config["Playing"],
+        return (config["Environment"], config["AI"],
                 config["SpeedRunners Config"])
 
 def model_config():
@@ -155,7 +155,7 @@ def model_config():
     # Read the config file, make sure not to re-name
     config.read("./config/config.ini")
 
-    return config["Window Size"], config["Playing"]
+    return config["Environment"], config["AI"]
 
 if(__name__ == "__main__"):
     cuda = torch.cuda.is_available()
