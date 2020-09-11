@@ -7,7 +7,7 @@ from typing import Tuple, Optional
 from hlrl.core.vision import FrameHandler
 from hlrl.core.vision.transforms import Grayscale, Interpolate
 
-#from speedrunnersai.speedrunners.actor import Actor
+from speedrunnersai.speedrunners.actor import Actor
 from speedrunnersai.speedrunners.structures import Address, Player, Match
 
 class SpeedRunnersEnv():
@@ -51,22 +51,22 @@ class SpeedRunnersEnv():
         self.res_shape = res_shape
         self.stacked_frames = stacked_frames
         self.window_size = window_size
-        #self.actor = Actor()
+        self.actor = Actor()
 
         # Create the d3dshot instance
         capture_output = "pytorch_float" + ("_gpu" if device == "cuda" else "")
         d3d = d3dshot.create(capture_output=capture_output)
 
         transforms = [Grayscale()] if grayscale else []
-        #transforms.append(Interpolate(size=res_shape, mode="bilinear"))
+        transforms.append(Interpolate(size=res_shape, mode="bilinear"))
 
-        #stack_channel = lambda frame: frame.view(1, -1, *frame.shape[2:])
-        #transforms.append(stack_channel)
+        stack_channel = lambda frame: frame.view(1, -1, *frame.shape[2:])
+        transforms.append(stack_channel)
 
         self.frame_handler = FrameHandler(d3d, transforms=transforms)
         
         self.max_time = max_time
-        #self.num_actions = self.actor.num_actions()
+        self.num_actions = self.actor.num_actions()
 
         # The environment properties
         self._state = None
@@ -118,7 +118,7 @@ class SpeedRunnersEnv():
         """
         Resets the game (in practice).
         """
-        #self.actor.reset()
+        self.actor.reset()
         self._episode_finished(True)
         self.frame_handler.get_new_frame()
         self.start_time = time()
@@ -146,7 +146,7 @@ class SpeedRunnersEnv():
         """
         self.reset()
         self.frame_handler.stop()
-        #self.actor.stop()
+        self.actor.stop()
 
         if self.memory is not None:
             self.memory.close_handle()
@@ -155,7 +155,7 @@ class SpeedRunnersEnv():
         """
         Takes a step into the environment with the action given.
         """
-        #self.actor.act(action)
+        self.actor.act(action)
         self.frame_handler.get_new_frame()
         self._state = self.frame_handler.get_frame_stack(
             range(self.stacked_frames), "first"
@@ -168,6 +168,12 @@ class SpeedRunnersEnv():
         self._episode_finished(False)
 
         return self.state, self.reward, self.terminal
+
+    def sample_action(self):
+        """
+        Returns a random action in the environment.
+        """
+        return self.actor.sample_action()
 
     def _update_memory(self):
         """

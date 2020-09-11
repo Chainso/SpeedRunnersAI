@@ -1,64 +1,52 @@
 import numpy as np
+import keyboard
 
-#from pykeyboard import PyKeyboard
 from collections import OrderedDict
 from configparser import ConfigParser
 
 class Actor():
     one_hot_acts = np.eye(17)
 
-    ACTIONS = {"left" : one_hot_acts[0],
-               "left_boost" : one_hot_acts[1],
-               "right" : one_hot_acts[2],
-               "right_boost" : one_hot_acts[3],
-               "left_jump" : one_hot_acts[4],
-               "left_jump_boost" : one_hot_acts[5],
-               "right_jump" : one_hot_acts[6],
-               "right_jump_boost" : one_hot_acts[7],
-               "left_grapple" : one_hot_acts[8],
-               "left_grapple_boost" : one_hot_acts[9],
-               "right_grapple" : one_hot_acts[10],
-               "right_grapple_boost" : one_hot_acts[11],
-               "left_item" : one_hot_acts[12],
-               "left_item_boost" : one_hot_acts[13],
-               "right_item" : one_hot_acts[14],
-               "right_item_boost" : one_hot_acts[15],
-               "slide" : one_hot_acts[16]
-              }
+    ACTIONS = OrderedDict([
+        ("left", [0, 0, 0, 0, 0, 1, 0]),
+        ("left_boost", [0, 0, 0, 1, 0, 1, 0]),
+        ("right", [0, 0, 0, 0, 0, 0, 1]),
+        ("right_boost", [0, 0, 0, 1, 0, 0, 1]),
+        ("left_jump", [1, 0, 0, 0, 0, 1, 0]),
+        ("left_jump_boost", [1, 0, 0, 1, 0, 1, 0]),
+        ("right_jump", [1, 0, 0, 0, 0, 0, 1]),
+        ("right_jump_boost", [1, 0, 0, 1, 0, 0, 1]),
+        ("left_grapple", [0, 1, 0, 0, 0, 1, 0]),
+        ("left_grapple_boost", [0, 1, 0, 1, 0, 1, 0]),
+        ("right_grapple", [0, 1, 0, 0, 0, 0, 1]),
+        ("right_grapple_boost", [0, 1, 0, 1, 0, 0, 1]),
+        ("left_item", [0, 0, 1, 0, 0, 1, 0]),
+        ("left_item_boost", [0, 0, 1, 1, 0, 1, 0]),
+        ("right_item", [0, 0, 1, 0, 0, 0, 1]),
+        ("right_item_boost", [0, 0, 1, 1, 0, 0, 1]),
+        ("slide", [0, 0, 0, 0, 1, 0, 0]),
+    ])
 
-    CONT_ACTIONS = {0 : [0, 0, 0, 0, 0, 1, 0],
-                    1 : [0, 0, 0, 1, 0, 1, 0],
-                    2 : [0, 0, 0, 0, 0, 0, 1],
-                    3 : [0, 0, 0, 1, 0, 0, 1],
-                    4 : [1, 0, 0, 0, 0, 1, 0],
-                    5 : [1, 0, 0, 1, 0, 1, 0],
-                    6 : [1, 0, 0, 0, 0, 0, 1],
-                    7 : [1, 0, 0, 1, 0, 0, 1],
-                    8 : [0, 1, 0, 0, 0, 1, 0],
-                    9 : [0, 1, 0, 1, 0, 1, 0],
-                    10 : [0, 1, 0, 0, 0, 0, 1],
-                    11 : [0, 1, 0, 1, 0, 0, 1],
-                    12 : [0, 0, 1, 0, 0, 1, 0],
-                    13 : [0, 0, 1, 1, 0, 1, 0],
-                    14 : [0, 0, 1, 0, 0, 0, 1],
-                    15 : [0, 0, 1, 1, 0, 0, 1],
-                    16 : [0, 0, 0, 0, 1, 0, 0],
-                    }
+    ACTION_ITEMS = list(ACTIONS.items())
 
     def __init__(self):
         """
         Creates an actor for the game speedrunners
         """
-        # Get the keyboard
-        self.keyboard = PyKeyboard()
-
         # Read the player key-bindings from the config
         self.speedrunners = self.read_config()
 
-        if(self.speedrunners["BOOST"] == ""):
-            self.speedrunners["BOOST"] = " "
-
         # The current values of the actions and the corresponding function
+        self.action_keys = [
+            self.speedrunners["JUMP"],
+            self.speedrunners["GRAPPLE"],
+            self.speedrunners["ITEM"],
+            self.speedrunners["BOOST"],
+            self.speedrunners["SLIDE"],
+            self.speedrunners["LEFT"],
+            self.speedrunners["RIGHT"]
+        ]
+
         self.action_values = [(self.speedrunners["JUMP"], 0),
                               (self.speedrunners["GRAPPLE"], 0),
                               (self.speedrunners["ITEM"], 0),
@@ -69,34 +57,24 @@ class Actor():
 
         self._reset = self.speedrunners["RESET"]
 
-        self.action_values = OrderedDict(self.action_values)
-        self.action_values_items = list(self.action_values.items())
-
     @staticmethod
     def num_actions():
         """
         Returns the number of actions the actor can take.
         """
-        return len(ACTIONS)
+        return len(Actor.ACTIONS)
 
-    def act(self, actions):
+    def act(self, action: int):
         """
-        Causes the actor to act based on the actions given
+        Causes the actor to act based on the action given
 
-        action : The actions for the actor to perform, a (6,) size array
+        action (int): The action for the actor to perform
         """
-        actions = CONT_ACTIONS[actions]
-        for i in range(len(actions)):
-            # Get the value of the action
-            value = actions[i]
+        keys = Actor.ACTION_ITEMS[action][-1]
+        for i in range(len(keys)):
+            self.set_action(i, keys[i])
 
-            # Get the action
-            action = self.action_values_items[i][0]
-
-            # Start or stop the action
-            self.set_action(action, value)
-
-    def set_action(self, action, value):
+    def set_action(self, action: int, value: int):
         """
         Will perform the action and set the value to 1 if the given value is
         positive, otherwise will stop performing the action and set the value
@@ -111,71 +89,36 @@ class Actor():
         else:
             self.single_action(action)
 
-    def single_action(self, action):
+    def single_action(self, action: int):
         """
         Does the single action given without checking for other actions
 
         action : The action to perform
         """
-        # Get the current value of the action
-        value = self.action_values[action]
+        keyboard.press(self.action_keys[action])
 
-        # Check if the action is already down
-        if(value != 1):
-            if(action.lower() == "down"):
-                self.keyboard.press_key(self.keyboard.down_key)
-            elif(action.lower() == "left"):
-                self.keyboard.press_key(self.keyboard.left_key)
-            elif(action.lower() == "right"):
-                self.keyboard.press_key(self.keyboard.right_key)
-            elif(action.lower() == "space"):
-                self.keyboard.press_key(self.keyboard.space_key)
-            else:
-                self.keyboard.press_key(action)
-
-            self.action_values[action] = 1
-
-    def stop_action(self, action, total_reset = False):
+    def stop_action(self, action):
         """
         Stops performing the given action if it is down
 
         action : The action to stop performing
-        total_reset : If both direction keys should be released if given a
-                      direction key
         """
-        # Get the current value of the action
-        value = self.action_values[action]
-
-        # Check if the action is already down
-        if(value != 0):
-            if(action.lower() == "down"):
-                self.keyboard.release_key(self.keyboard.down_key)
-            elif(action.lower() == "left"):
-                self.keyboard.release_key(self.keyboard.left_key)
-            elif(action.lower() == "right"):
-                self.keyboard.release_key(self.keyboard.right_key)
-            elif(action.lower() == "space"):
-                self.keyboard.release_key(self.keyboard.space_key)
-            else:
-                self.keyboard.release_key(action)
-
-            self.action_values[action] = 0
+        keyboard.release(self.action_keys[action])
 
     def release_keys(self):
         """
         Releases every key in the current list of given actions
         """
-        for key in self.action_values:
-            self.stop_action(key)
+        for key in self.action_keys:
+            keyboard.release(key)
 
     def reset(self):
         """
         Resets the game.
         """
         # Tap not working
-        self.keyboard.press_key(self._reset)
-        
         self.release_keys()
+        keyboard.press(self._reset)
 
     def stop(self):
         """
@@ -189,27 +132,13 @@ class Actor():
 
         action : The action to convert
         """
-        key = ""
+        return Actor.ACTIONS.keys().index(action)
 
-        if(action[4]):
-            key = "slide"
-        else:
-            if(action[5]):
-                key += "left"
-            else:
-                key += "right"
-
-            if(action[0]):
-                key += "_jump"
-            elif(action[1]):
-                key += "_grapple"
-            elif(action[2]):
-                key += "_item"
-
-            if(action[3]):
-                key += "_boost"
-
-        return ACTIONS[key]
+    def sample_action(self) -> int:
+        """
+        Returns a random action.
+        """
+        return np.random.randint(0, self.num_actions())
 
     def read_config(self):
         """
@@ -219,6 +148,6 @@ class Actor():
         config = ConfigParser()
     
         # Read the config file, make sure not to re-name
-        config.read("./config/config.ini")
+        config.read("../config/config.ini")
 
         return config["SpeedRunners Config"]                                                  
