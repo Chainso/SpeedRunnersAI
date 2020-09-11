@@ -1,7 +1,9 @@
 import numpy as np
+import d3dshot
 
 from time import time
 from pymem import Pymem
+from torch.nn.functional import interpolate
 
 #from speedrunnersai.speedrunners.screen_viewer import ScreenViewer
 from speedrunnersai.speedrunners.memory_reader import MemoryReader
@@ -21,6 +23,19 @@ class SpeedRunnersEnv():
     def __init__(self, max_time, window_size, res_shape, read_mem = False):
         self.res_shape = res_shape
         self.actor = Actor()
+
+        # Create the d3dshot instance
+        d3dshot = d3dshot.create(capture_output="pytorch_float_gpu")
+        formula = torch.FloatTensor([0.2125, 0.7154, 0.0721]).to("cuda")
+        grayscale_transform = lambda frame: do_mul(frame, formula).unsqueeze(1)
+        interpolate_transform = lambda frame: interpolate(
+            frame, size=(128, 128), mode="bilinear"
+        )
+        
+        transforms = [grayscale_transform]#, interpolate_transform]
+        capture_time = 10
+        frame_handler = FrameHandler(d3d, transforms=transforms)
+
         #self.sv = ScreenViewer(window_size, res_shape, self._screen_update_hook)
         
         self.max_time = max_time
