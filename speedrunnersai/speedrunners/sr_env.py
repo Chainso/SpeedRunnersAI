@@ -42,6 +42,7 @@ class SpeedRunnersEnv():
                 read memory values (DO NOT USE ONLINE).
         """
         self.res_shape = res_shape
+        self.window_size = window_size
         self.actor = Actor()
 
         # Create the d3dshot instance
@@ -116,7 +117,7 @@ class SpeedRunnersEnv():
         """
         Starts the screen viewer.
         """
-        self.frame_handler.capture(target_fps=240)
+        self.frame_handler.capture(target_fps=240, region=self.window_size)
 
         if self.memory is not None:
             self.memory.open_process_from_name("speedrunners.exe")
