@@ -18,4 +18,4 @@ class Match(Structure):
     def update(self, memory: Pymem, match_address: int) -> None:
         # Prelimnarily using the 1 player for all
         for player in self.players:
-            player.update(memory, Address.BASE_PLAYER)
+            player.update(memory, Address.BASE_PLAYER.value)

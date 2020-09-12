@@ -1,22 +1,36 @@
+from configparser import ConfigParser
+
+def read_config():
+    """
+    Reads the config file to obtain the settings for the recorder, the
+    window size for the training data and the game bindings
+    """
+    config = ConfigParser()
+
+    # Read the config file, make sure not to re-name
+    config.read("../config/config.ini")
+
+    return config["Environment"], config["AI"]                                          
+
 if __name__ == "__main__":
     import torch
 
     from time import time
     from speedrunnersai.speedrunners import SpeedRunnersEnv
+    from PIL import Image
 
-    max_time = 120
-    res_shape = (128, 128)
-    grayscale = True
-    stacked_frames = 1
-    window_size = None
-    device = "cuda"
-    read_mem = False
-
+    env_config, ai_config = read_config()
+    print(bool(env_config["READ_MEM"]))
+    """
     env = SpeedRunnersEnv(
-        max_time, res_shape, grayscale, stacked_frames, window_size, device,
-        read_mem
+        int(env_config["MAX_TIME"]),
+        (int(env_config["HEIGHT"]), int(env_config["WIDTH"])),
+        bool(env_config["GRAYSCALE"]), int(env_config["STACKED_FRAMES"]),
+        (int(env_config["LEFT"]), int(env_config["TOP"]),
+            int(env_config["RIGHT"]), int(env_config["BOTTOM"])),
+        ai_config["DEVICE"], bool(env_config["READ_MEM"])
     )
-
+    
     frames = 300
 
     env.start()
@@ -29,5 +43,13 @@ if __name__ == "__main__":
     total_time = time() - cur_time
     env.stop()
 
-    
+    print(env.state.shape)
+    print(env.match.players[0])
+    print(env.match.players[0].speed())
     print("Total time: {}, {} FPS".format(total_time, frames/total_time))
+
+    frame = env.state.squeeze(1)[0] * 255
+    frame = frame.byte().cpu().numpy()
+    img = Image.fromarray(frame, "L")
+    img.show()
+    """

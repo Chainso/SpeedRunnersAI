@@ -1,11 +1,14 @@
 import numpy as np
 import d3dshot
 
+
 from time import time
 from pymem import Pymem
 from typing import Tuple, Optional
 from hlrl.core.vision import FrameHandler
-from hlrl.core.vision.transforms import Grayscale, Interpolate
+from hlrl.core.vision.transforms import (
+    Grayscale, ConvertDimensionOrder, StackDimension, Interpolate
+)
 
 from speedrunnersai.speedrunners.actor import Actor
 from speedrunnersai.speedrunners.structures import Address, Player, Match
@@ -58,10 +61,9 @@ class SpeedRunnersEnv():
         d3d = d3dshot.create(capture_output=capture_output)
 
         transforms = [Grayscale()] if grayscale else []
+        transforms.append(ConvertDimensionOrder())
+        transforms.append(StackDimension(1))
         transforms.append(Interpolate(size=res_shape, mode="bilinear"))
-
-        stack_channel = lambda frame: frame.view(1, -1, *frame.shape[2:])
-        transforms.append(stack_channel)
 
         self.frame_handler = FrameHandler(d3d, transforms=transforms)
         
@@ -149,7 +151,7 @@ class SpeedRunnersEnv():
         self.actor.stop()
 
         if self.memory is not None:
-            self.memory.close_handle()
+            self.memory.close_process()
 
     def step(self, action):
         """
