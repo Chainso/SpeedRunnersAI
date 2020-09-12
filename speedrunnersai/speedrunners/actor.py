@@ -66,9 +66,9 @@ class Actor():
 
     def act(self, action: int):
         """
-        Causes the actor to act based on the action given
+        Causes the actor to act based on the action given.
 
-        action (int): The action for the actor to perform
+        action (int): The action for the actor to perform.
         """
         keys = Actor.ACTION_ITEMS[action][-1]
         for i in range(len(keys)):
@@ -91,9 +91,9 @@ class Actor():
 
     def single_action(self, action: int):
         """
-        Does the single action given without checking for other actions
+        Does the single action given without checking for other actions.
 
-        action : The action to perform
+        action : The action to perform.
         """
         keyboard.press(self.action_keys[action])
 
@@ -107,7 +107,7 @@ class Actor():
 
     def release_keys(self):
         """
-        Releases every key in the current list of given actions
+        Releases every key in the current list of given actions.
         """
         for key in self.action_keys:
             keyboard.release(key)
@@ -128,7 +128,8 @@ class Actor():
 
     def continuous_to_discrete(self, action):
         """
-        Converts an array of actions in the continuous form to a discrete action
+        Converts an array of actions in the continuous form to a discrete
+        action.
 
         action : The action to convert
         """
@@ -142,8 +143,7 @@ class Actor():
 
     def read_config(self):
         """
-        Reads the config file to obtain the settings for the recorder, the
-        window size for the training data and the game bindings
+        Reads the config file to obtain the SpeedRunners key bindings.
         """
         config = ConfigParser()
     

@@ -111,7 +111,7 @@ class Agent():
         self.hidden_state = None
 
         if(finish_func is not None and finish is False):
-            finish = finish_func(episode)
+            finish = finish_func(self.episode)
 
         while(not finish and self.episode < episodes + 1):
             terminal = False

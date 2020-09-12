@@ -1,36 +1,21 @@
-from configparser import ConfigParser
-
-def read_config():
-    """
-    Reads the config file to obtain the settings for the recorder, the
-    window size for the training data and the game bindings
-    """
-    config = ConfigParser()
-
-    # Read the config file, make sure not to re-name
-    config.read("../config/config.ini")
-
-    return config["Environment"], config["AI"]                                          
-
 if __name__ == "__main__":
     import torch
 
     from time import time
-    from speedrunnersai.speedrunners import SpeedRunnersEnv
     from PIL import Image
 
-    env_config, ai_config = read_config()
-    print(bool(env_config["READ_MEM"]))
-    """
+    from speedrunnersai.speedrunners import SpeedRunnersEnv
+    from speedrunnersai.config.argument_parser import get_args
+
+    args = get_args()
+    print(args)
+
+
     env = SpeedRunnersEnv(
-        int(env_config["MAX_TIME"]),
-        (int(env_config["HEIGHT"]), int(env_config["WIDTH"])),
-        bool(env_config["GRAYSCALE"]), int(env_config["STACKED_FRAMES"]),
-        (int(env_config["LEFT"]), int(env_config["TOP"]),
-            int(env_config["RIGHT"]), int(env_config["BOTTOM"])),
-        ai_config["DEVICE"], bool(env_config["READ_MEM"])
+        args.max_time, args.state_size, args.grayscale, args.stacked_frames,
+        args.window_size, args.device, args.read_memory
     )
-    
+
     frames = 300
 
     env.start()
@@ -52,4 +37,3 @@ if __name__ == "__main__":
     frame = frame.byte().cpu().numpy()
     img = Image.fromarray(frame, "L")
     img.show()
-    """
