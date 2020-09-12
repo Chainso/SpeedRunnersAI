@@ -15,7 +15,7 @@ def get_args():
         help="the size of each state in (height width)"
     )
     parser.add_argument(
-        "--grayscale", dest="grayscale", action="store_true",
+        "--grayscale", action="store_true",
         help="if the images should be converted to grayscale, default true"
     )
     parser.add_argument(
@@ -24,7 +24,7 @@ def get_args():
         help="the number of frames in a row for each model input"
     )
     parser.add_argument(
-        "--read_memory", dest="read_memory", action="store_false",
+        "--read_memory", action="store_true",
         help="if this process should attach to the game and read memory from "
             + "it, default false"
     )

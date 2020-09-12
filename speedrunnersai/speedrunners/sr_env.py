@@ -1,6 +1,6 @@
 import numpy as np
 import d3dshot
-
+import win32gui
 
 from time import time
 from pymem import Pymem
@@ -17,6 +17,8 @@ class SpeedRunnersEnv():
     """
     The SpeedRunners environment to be interacted with.
     """
+    PROCESS_NAME = "speedrunners.exe"
+
     # The addresses of all the values to get
     addresses = {"x_speed" : 0x29CBF23C,
                  "y_speed" : 0x29CBF240,
@@ -134,7 +136,12 @@ class SpeedRunnersEnv():
         self.frame_handler.capture(target_fps=240, region=self.window_size)
 
         if self.memory is not None:
-            self.memory.open_process_from_name("speedrunners.exe")
+            self.memory.open_process_from_name(SpeedRunnersEnv.PROCESS_NAME)
+
+            window = win32gui.FindWindow(
+                None, SpeedRunnersEnv.PROCESS_NAME.split(".")[0]
+            )
+            win32gui.SetForegroundWindow(window)
 
     def pause(self):
         """

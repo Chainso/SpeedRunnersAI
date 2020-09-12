@@ -2,7 +2,6 @@ if __name__ == "__main__":
     import torch
 
     from time import time
-    from PIL import Image
 
     from speedrunnersai.speedrunners import SpeedRunnersEnv
     from speedrunnersai.config.argument_parser import get_args
@@ -16,7 +15,7 @@ if __name__ == "__main__":
         args.window_size, args.device, args.read_memory
     )
 
-    frames = 300
+    frames = 3
 
     env.start()
     cur_time = time()
@@ -32,8 +31,3 @@ if __name__ == "__main__":
     print(env.match.players[0])
     print(env.match.players[0].speed())
     print("Total time: {}, {} FPS".format(total_time, frames/total_time))
-
-    frame = env.state.squeeze(1)[0] * 255
-    frame = frame.byte().cpu().numpy()
-    img = Image.fromarray(frame, "L")
-    img.show()
