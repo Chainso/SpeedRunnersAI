@@ -15,7 +15,7 @@ if __name__ == "__main__":
         args.window_size, args.device, args.read_memory
     )
 
-    frames = 3
+    frames = 300
 
     env.start()
     cur_time = time()
