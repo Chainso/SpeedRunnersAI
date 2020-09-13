@@ -9,7 +9,6 @@ if __name__ == "__main__":
     args = get_args()
     print(args)
 
-
     env = SpeedRunnersEnv(
         args.max_time, args.state_size, args.grayscale, args.stacked_frames,
         args.window_size, args.device, args.read_memory

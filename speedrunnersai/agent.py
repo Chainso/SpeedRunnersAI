@@ -1,27 +1,12 @@
 import numpy as np
 
-from configparser import ConfigParser
-
 from utils import discount
 from speedrunnersai.speedrunners.sr_env import SpeedRunnersEnv
 
 class Agent():
-    def __init__(self, model):
+    def __init__(self, model, env):
         self.model = model
-
-        window_size, sr_conf = self.read_config()
-
-        # Get the game screen size
-        game_screen = (int(sr_conf["WIDTH"]),
-                       int(sr_conf["HEIGHT"]))
-
-        # Get the resized screen size from the config
-        res_screen_size = (int(window_size["WIDTH"]),
-                           int(window_size["HEIGHT"]),
-                           int(window_size["DEPTH"]))
-
-        self.env = SpeedRunnersEnv(120, game_screen, res_screen_size,
-                                   read_mem = False) # False until fixed
+        self.env = env
 
         self.episode = 1
         self.hidden_state = None
@@ -30,7 +15,7 @@ class Agent():
         """
         Takes one step in the environment
         """
-        action, hidden_state = self.model.step(state, hidden_state, greedy)
+        action, hidden_state = self.model.step(state, self.hidden_state, greedy)
         return action, hidden_state, *self.env.step(action)
 
     def train(self, replay_buffer, episodes, burn_in_length, sequence_length,
@@ -43,7 +28,7 @@ class Agent():
         self.hidden_state is None
 
         if(finish_func is not None and finish is False):
-            finish = finish_func(episode)
+            finish = finish_func(self.episode)
 
         while(not finish and self.episode < episodes + 1):
             terminal = False
@@ -75,7 +60,7 @@ class Agent():
                     # Trying a new way of discounting
                     disc_rewards = []
                     for i in range(len(states) - n_steps):
-                        disc_rewards[i] = discount(rewards[i, i + 1 + n_steps],
+                        disc_rewards[i] = discount(rewards[i:i + 1 + n_steps],
                                                    decay)[0]
                         experiences = zip(np.stack(states[burn_in_length + sequence_length]),
                                           np.stack(actions[burn_in_length + sequence_length]),
@@ -124,15 +109,3 @@ class Agent():
                     finish = finish_func(self.episode)
 
             self.episode += 1
-
-    def read_config(self):
-        """
-        Reads the config file to obtain the settings for the recorder, the
-        window size for the training data and the game bindings
-        """
-        config = ConfigParser()
-    
-        # Read the config file, make sure not to re-name
-        config.read("./config/config.ini")
-
-        return (config["Environment"], config["SpeedRunners Config"])

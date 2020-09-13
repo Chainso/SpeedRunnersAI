@@ -5,6 +5,7 @@ import win32gui
 from time import time
 from pymem import Pymem
 from typing import Tuple, Optional, Any
+from hlrl.core.envs import Env
 from hlrl.core.vision import FrameHandler
 from hlrl.core.vision.transforms import (
     Grayscale, ConvertDimensionOrder, StackDimension, Interpolate
@@ -13,20 +14,11 @@ from hlrl.core.vision.transforms import (
 from speedrunnersai.speedrunners.actor import Actor
 from speedrunnersai.speedrunners.structures import Address, Player, Match
 
-class SpeedRunnersEnv():
+class SpeedRunnersEnv(Env):
     """
     The SpeedRunners environment to be interacted with.
     """
     PROCESS_NAME = "speedrunners.exe"
-
-    # The addresses of all the values to get
-    addresses = {"x_speed" : 0x29CBF23C,
-                 "y_speed" : 0x29CBF240,
-                 "current_time" : 0x29C9584C,
-                 "obstacles_hit" : 0x739D1334}
-
-    # The offsets of all the values to get
-    offsets = {"obstacles_hit" : [0x0, 0x0, 0x1F6C, 0x8, 0x4]}
 
     def __init__(self,
         max_time: float,
@@ -53,7 +45,9 @@ class SpeedRunnersEnv():
             read_mem (bool): If true, will attach to the speedrunners process to
                 read memory values (DO NOT USE ONLINE).
         """
-        self.state_size = res_shape + (1 if grayscale else 3,)
+        super().__init__()
+
+        self.state_space = res_shape + (1 if grayscale else 3,)
         self.stacked_frames = stacked_frames
         self.window_size = window_size
         self.actor = Actor()
@@ -70,12 +64,9 @@ class SpeedRunnersEnv():
         self.frame_handler = FrameHandler(d3d, transforms=transforms)
         
         self.max_time = max_time
-        self.num_actions = self.actor.num_actions()
+        self.action_space = self.actor.num_actions()
 
         # The environment properties
-        self._state = None
-        self._reward = 0
-        self._terminal = False
         self._reached_goal = False
 
         # Relevant memory information
@@ -86,29 +77,6 @@ class SpeedRunnersEnv():
         self._last_time = 0
         self.num_obstacles_hit = self._get_obstacles_hit()
         self.start_time = 0
-
-    @property
-    def state(self) -> Any:
-        """
-        The current state of the environment. Will be None if the environment
-        has not been started.
-        """
-        return self._state
-
-    @property
-    def reward(self) -> float:
-        """
-        Returns the reward of the last action taken. If no previous action has
-        been taken then 0 will be returned.
-        """
-        return self._reward
-
-    @property
-    def terminal(self) -> Any:
-        """
-        Returns true if the current state is a terminal state.
-        """
-        return self._terminal
 
     def reset(self) -> Any:
         """
@@ -127,13 +95,14 @@ class SpeedRunnersEnv():
         """
         self.frame_handler.capture(target_fps=240, region=self.window_size)
 
+        # Make sure game window is on top
+        window = win32gui.FindWindow(
+            None, SpeedRunnersEnv.PROCESS_NAME.split(".")[0]
+        )
+        win32gui.SetForegroundWindow(window)
+
         if self.memory is not None:
             self.memory.open_process_from_name(SpeedRunnersEnv.PROCESS_NAME)
-
-            window = win32gui.FindWindow(
-                None, SpeedRunnersEnv.PROCESS_NAME.split(".")[0]
-            )
-            win32gui.SetForegroundWindow(window)
 
     def pause(self) -> None:
         """
@@ -161,7 +130,7 @@ class SpeedRunnersEnv():
         """
         self.actor.act(action)
         self.frame_handler.get_new_frame()
-        self._state = self.frame_handler.get_frame_stack(
+        self.state = self.frame_handler.get_frame_stack(
             range(self.stacked_frames), "first"
         )
 
@@ -178,6 +147,12 @@ class SpeedRunnersEnv():
         Returns a random action in the environment.
         """
         return self.actor.sample_action()
+
+    def render():
+        """
+        Here to not break certain agents, nothing needs to be done to render.
+        """
+        pass
 
     def _update_memory(self) -> None:
         """
@@ -201,10 +176,10 @@ class SpeedRunnersEnv():
 
         if(self._reached_goal):
             reward += 10
-        elif(self._terminal):
+        elif(self.terminal):
             reward = obst_reward
 
-        self._reward = reward
+        self.reward = reward
 
 
     def _get_obstacles_hit(self) -> int:
@@ -223,25 +198,13 @@ class SpeedRunnersEnv():
                 and (time() - self.start_time) > self.max_time)
             or reset):
             self._last_time = 0
-            self._terminal = True
+            self.terminal = True
             self._reached_goal = False
         elif(self.match.current_time < self._last_time):
             self._last_time = 0
-            self._terminal = True
+            self.terminal = True
             self._reached_goal = True
         else:
             self._last_time = self.match.current_time
-            self._terminal = False
+            self.terminal = False
             self._reached_goal = False
-
-    def state_space(self) -> Tuple[int, int, int]:
-        """
-        Returns the shape of the captured images.
-        """
-        return self.state_size
-
-    def action_space(self) -> int:
-        """
-        Returns the number of actions the agent can take.
-        """
-        return self.num_actions
