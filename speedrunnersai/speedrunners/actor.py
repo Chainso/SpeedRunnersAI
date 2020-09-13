@@ -3,6 +3,7 @@ import keyboard
 
 from collections import OrderedDict
 from configparser import ConfigParser
+from os import path
 
 class Actor():
     one_hot_acts = np.eye(17)
@@ -148,6 +149,9 @@ class Actor():
         config = ConfigParser()
     
         # Read the config file, make sure not to re-name
-        config.read("../config/config.ini")
+        config_path = path.dirname(path.abspath(__file__))
+        config_path += "/../config/config.ini"
+        print(config_path)
+        config.read(config_path)
 
         return config["SpeedRunners Config"]                                                  

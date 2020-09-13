@@ -5,7 +5,7 @@ if __name__ == "__main__":
     from time import time, sleep
     from PIL import Image
 
-    from hlrl.core.vision import FrameHandler
+    from hlrl.core.vision import WindowsFrameHandler
     from hlrl.core.vision.transforms import Grayscale, Interpolate
 
     d3d = d3dshot.create(capture_output="pytorch_float_gpu")
@@ -16,7 +16,7 @@ if __name__ == "__main__":
     ]
 
     capture_time = 10
-    frame_handler = FrameHandler(d3d, transforms=transforms)
+    frame_handler = WindowsFrameHandler(d3d, transforms=transforms)
 
 
     # A higher target fps since transforms will slow down the capturing

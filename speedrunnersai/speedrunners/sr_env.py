@@ -6,7 +6,7 @@ from time import time
 from pymem import Pymem
 from typing import Tuple, Optional, Any
 from hlrl.core.envs import Env
-from hlrl.core.vision import FrameHandler
+from hlrl.core.vision import WindowsFrameHandler
 from hlrl.core.vision.transforms import (
     Grayscale, ConvertDimensionOrder, StackDimension, Interpolate
 )
@@ -21,7 +21,7 @@ class SpeedRunnersEnv(Env):
     PROCESS_NAME = "speedrunners.exe"
 
     def __init__(self,
-        max_time: float,
+        episode_length: float,
         res_shape: Tuple[int, int],
         grayscale: bool = True,
         stacked_frames: int = 1,
@@ -32,7 +32,7 @@ class SpeedRunnersEnv(Env):
         Creates the environment.
 
         Args:
-            max_time (float): The maximum amount of time an agent can play
+            episode_length (float): The maximum amount of time an agent can play
                 before an environment reset.
             res_shape (Tuple[int, int]): The shape to resize the captured
                 images to.
@@ -47,10 +47,13 @@ class SpeedRunnersEnv(Env):
         """
         super().__init__()
 
-        self.state_space = res_shape + (1 if grayscale else 3,)
+        self.state_space = (
+            res_shape + ((1 if grayscale else 3) * stacked_frames,)
+        )
         self.stacked_frames = stacked_frames
         self.window_size = window_size
         self.actor = Actor()
+        self.window = None
 
         # Create the d3dshot instance
         capture_output = "pytorch_float" + ("_gpu" if device == "cuda" else "")
@@ -61,10 +64,10 @@ class SpeedRunnersEnv(Env):
         transforms.append(StackDimension(1))
         transforms.append(Interpolate(size=res_shape, mode="bilinear"))
 
-        self.frame_handler = FrameHandler(d3d, transforms=transforms)
+        self.frame_handler = WindowsFrameHandler(d3d, transforms=transforms)
         
-        self.max_time = max_time
-        self.action_space = self.actor.num_actions()
+        self.episode_length = episode_length
+        self.action_space = (self.actor.num_actions(),)
 
         # The environment properties
         self._reached_goal = False
@@ -84,7 +87,13 @@ class SpeedRunnersEnv(Env):
         """
         self.actor.reset()
         self._episode_finished(True)
-        self.frame_handler.get_new_frame()
+
+        for _ in range(self.stacked_frames):
+            self.frame_handler.get_new_frame()
+
+        self.state = self.frame_handler.get_frame_stack(
+            range(self.stacked_frames), "first"
+        )
         self.start_time = time()
 
         return self.state
@@ -96,10 +105,10 @@ class SpeedRunnersEnv(Env):
         self.frame_handler.capture(target_fps=240, region=self.window_size)
 
         # Make sure game window is on top
-        window = win32gui.FindWindow(
+        self.window = win32gui.FindWindow(
             None, SpeedRunnersEnv.PROCESS_NAME.split(".")[0]
         )
-        win32gui.SetForegroundWindow(window)
+        win32gui.SetForegroundWindow(self.window)
 
         if self.memory is not None:
             self.memory.open_process_from_name(SpeedRunnersEnv.PROCESS_NAME)
@@ -128,11 +137,14 @@ class SpeedRunnersEnv(Env):
         Args:
             action (int): The index of the action to take.
         """
-        self.actor.act(action)
-        self.frame_handler.get_new_frame()
-        self.state = self.frame_handler.get_frame_stack(
-            range(self.stacked_frames), "first"
-        )
+        # Only act if the game window is in the foreground
+        if win32gui.GetForegroundWindow() == self.window:
+            self.actor.act(action)
+
+            self.frame_handler.get_new_frame()
+            self.state = self.frame_handler.get_frame_stack(
+                range(self.stacked_frames), "first"
+            )
 
         # Update structures with new memory
         self._update_memory()
@@ -140,7 +152,7 @@ class SpeedRunnersEnv(Env):
         # Dont forget to calculate rewards
         self._episode_finished(False)
 
-        return self.state, self.reward, self.terminal
+        return self.state, self.reward, self.terminal, None
 
     def sample_action(self) -> int:
         """
@@ -148,7 +160,7 @@ class SpeedRunnersEnv(Env):
         """
         return self.actor.sample_action()
 
-    def render():
+    def render(self) -> None:
         """
         Here to not break certain agents, nothing needs to be done to render.
         """
@@ -190,21 +202,24 @@ class SpeedRunnersEnv(Env):
         """
         return 0
 
-
-    def _episode_finished(self, reset = False) -> None:
-        if((self.max_time is not None
-            and self.match.current_time > self.max_time)
-            or (self.max_time is not None
-                and (time() - self.start_time) > self.max_time)
-            or reset):
+    def _episode_finished(self, reset: bool = False) -> None:
+        if reset:
             self._last_time = 0
-            self.terminal = True
-            self._reached_goal = False
-        elif(self.match.current_time < self._last_time):
-            self._last_time = 0
-            self.terminal = True
-            self._reached_goal = True
-        else:
-            self._last_time = self.match.current_time
             self.terminal = False
             self._reached_goal = False
+        else:
+            if((self.episode_length is not None
+                and self.match.current_time > self.episode_length)
+                or (self.episode_length is not None
+                    and (time() - self.start_time) > self.episode_length)):
+                self._last_time = 0
+                self.terminal = True
+                self._reached_goal = False
+            elif(self.match.current_time < self._last_time):
+                self._last_time = 0
+                self.terminal = True
+                self._reached_goal = True
+            else:
+                self._last_time = self.match.current_time
+                self.terminal = False
+                self._reached_goal = False
