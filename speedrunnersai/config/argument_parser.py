@@ -85,7 +85,7 @@ def get_args() -> Namespace:
 
     # Agent arguments
     parser.add_argument(
-		"--episodes", type=int, default=1,
+		"--episodes", type=int, default=10000,
 		help="the number of episodes to train for"
 	)
     parser.add_argument(
@@ -109,7 +109,7 @@ def get_args() -> Namespace:
 
     # Experience Replay args
     parser.add_argument(
-		"--er_capacity", type=float, default=4096,
+		"--er_capacity", type=float, default=10000,
 		help="the maximum amount of episodes in the replay buffer"
 	)
     parser.add_argument(

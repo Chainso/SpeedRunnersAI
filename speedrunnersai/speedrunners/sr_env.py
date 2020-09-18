@@ -168,7 +168,8 @@ class SpeedRunnersEnv(Env):
         # Update structures with new memory
         self._update_memory()
 
-        # Dont forget to calculate rewards
+        self._get_reward()
+
         self._episode_finished(False)
 
         return self.state, self.reward, self.terminal, None
@@ -196,8 +197,6 @@ class SpeedRunnersEnv(Env):
         """
         Returns the reward for the current state of the environment.
         """
-        reward = 0
-
         reward = self.match.players[0].speed() / 700
 
         obst_dif = self._get_obstacles_hit() - self.num_obstacles_hit
