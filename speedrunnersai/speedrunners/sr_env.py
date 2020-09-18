@@ -168,10 +168,10 @@ class SpeedRunnersEnv(Env):
         # Update structures with new memory
         self._update_memory()
 
-        self._get_reward()
-
         self._episode_finished(False)
 
+        self._get_reward()
+        
         return self.state, self.reward, self.terminal, None
 
     def sample_action(self) -> int:
