@@ -151,7 +151,7 @@ class Actor():
         # Read the config file, make sure not to re-name
         config_path = path.dirname(path.abspath(__file__))
         config_path += "/../config/config.ini"
-        print(config_path)
+
         config.read(config_path)
 
         return config["SpeedRunners Config"]                                                  

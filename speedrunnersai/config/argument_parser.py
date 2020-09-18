@@ -19,12 +19,11 @@ def get_args() -> Namespace:
         help="the size of each state in (height width)"
     )
     parser.add_argument(
-        "--grayscale", action="store_true",
-        help="if the images should be converted to grayscale, default true"
+        "--rgb", action="store_true",
+        help="if the images should be rgb instead of grayscale, default false"
     )
     parser.add_argument(
-        "--stacked_frames", type=int, default=4,
-        metavar="NUM_FRAMES",
+        "--stacked_frames", type=int, default=4, metavar="NUM_FRAMES",
         help="the number of frames in a row for each model input"
     )
     parser.add_argument(
@@ -110,7 +109,7 @@ def get_args() -> Namespace:
 
     # Experience Replay args
     parser.add_argument(
-		"--er_capacity", type=float, default=50000,
+		"--er_capacity", type=float, default=4096,
 		help="the maximum amount of episodes in the replay buffer"
 	)
     parser.add_argument(

@@ -1,9 +1,9 @@
-from hlrl.torch.agents import OffPolicyAgent
+from hlrl.torch.agents import TorchRLAgent
 from collections import OrderedDict
 
-class Agent(OffPolicyAgent):
+class Agent(TorchRLAgent):
     """
-    Creates the SpeedRunners agent, a modified OffPolicyAgent since the
+    Wraps the SpeedRunners agent, a modified TorchRLAgent wrapper since the
     environment already returns torch tensors.
     """
     def transform_state(self, state):
@@ -13,22 +13,3 @@ class Agent(OffPolicyAgent):
         return OrderedDict({
             "state": state
         })
-    
-    def transform_reward(self, reward):
-        """
-        Transforms the reward of an environment step.
-        """
-        return reward
-
-    def transform_terminal(self, terminal):
-        """
-        Transforms the terminal of an environment step.
-        """
-        return terminal
-
-    def transform_action(self, action):
-        """
-        Transforms the action of the algorithm output to be usable with the
-        environment.
-        """
-        return action

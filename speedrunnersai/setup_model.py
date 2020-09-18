@@ -3,6 +3,7 @@ import torch
 
 from torch import nn
 from hlrl.core.logger import TensorboardLogger
+from hlrl.core.agents import OffPolicyAgent
 from hlrl.torch.agents import TorchRLAgent
 from hlrl.torch.algos import TorchRLAlgo, RainbowIQN
 from hlrl.torch.policies import LinearPolicy, Conv2dPolicy
@@ -35,8 +36,8 @@ def setup_model(args: Namespace) -> Tuple[
     """
     # Environment
     env = SpeedRunnersEnv(
-        args.episode_length, args.state_size, args.grayscale, args.stacked_frames,
-        args.window_size, args.device, args.read_memory
+        args.episode_length, args.state_size, not args.rgb,
+        args.stacked_frames, args.window_size, args.device, args.read_memory
     )
 
     # Algorithm
@@ -49,15 +50,15 @@ def setup_model(args: Namespace) -> Tuple[
 
     # Setup networks
     qfunc = LinearPolicy(
-        1024, env.action_space[0], args.hidden_size, 1,
+        1024, env.action_space[0], args.hidden_size, args.num_layers,
         activation_fn
     )
 
     autoencoder = Autoencoder(
-        (env.state_space[-1], 32, 64, 128, 128, 64),
-        (5, 5, 3, 3, 3),
-        (2, 2, 2, 2, 1),
-        (0, 0, 0, 0, 0),
+        (env.state_space[-1], 32, 64, 64, 64),
+        (8, 4, 4, 3),
+        (4, 2, 2, 1),
+        (0, 0, 0, 0),
         activation_fn
     )
 
@@ -71,8 +72,7 @@ def setup_model(args: Namespace) -> Tuple[
     if args.load_path is not None:
         algo.load(args.load_path)
 
-    agent = Agent(
-        env, algo, logger=logger, device=args.device
-    )
+    agent = OffPolicyAgent(env, algo, logger=logger)
+    agent = Agent(agent, device=args.device)
 
     return env, algo, agent

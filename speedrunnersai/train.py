@@ -12,6 +12,8 @@ if __name__ == "__main__":
 
     env, algo, agent = setup_model(args)
 
+    algo.create_optimizers()
+
     algo.train()
     algo.share_memory()
 
@@ -22,16 +24,25 @@ if __name__ == "__main__":
         args.er_epsilon
     )
 
-    agents = [agent]
+    env.start()
 
-    agent_pool = AgentPool(agents)
-    agent_procs = agent_pool.train(
-        args.episodes, experience_queue, args.decay, args.n_steps
+    agent.train(
+        args.episodes, args.decay, args.n_steps, experience_replay, algo,
+        args.batch_size, args.start_size, args.save_dir, args.save_interval
     )
+
+    #agents = [agent]
+
+    #agent_pool = AgentPool(agents)
+    #agent_procs = agent_pool.train_process(
+        #args.episodes, args.decay, args.n_steps, experience_queue
+    #)
 
     # Start the worker for the model
-    worker = Worker(algo, experience_replay, experience_queue)
-    worker.train(
-        agent_procs, args.batch_size, args.start_size,
-        args.save_path, args.save_interval
-    )
+    #worker = Worker(algo, experience_replay, experience_queue)
+    #worker.train(
+        #agent_procs, args.batch_size, args.start_size, args.save_dir,
+        #args.save_interval
+    #)
+    
+    env.stop()

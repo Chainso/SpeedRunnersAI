@@ -7,7 +7,7 @@ from pymem import Pymem
 from typing import Tuple, Optional, Any
 from hlrl.core.envs import Env
 from hlrl.core.vision import WindowsFrameHandler
-from hlrl.core.vision.transforms import (
+from hlrl.torch.vision.transforms import (
     Grayscale, ConvertDimensionOrder, StackDimension, Interpolate
 )
 
@@ -57,14 +57,26 @@ class SpeedRunnersEnv(Env):
 
         # Create the d3dshot instance
         capture_output = "pytorch_float" + ("_gpu" if device == "cuda" else "")
-        d3d = d3dshot.create(capture_output=capture_output)
+        d3d = d3dshot.create(
+            capture_output=capture_output, frame_buffer_size=4
+        )
 
-        transforms = [Grayscale()] if grayscale else []
-        transforms.append(ConvertDimensionOrder())
-        transforms.append(StackDimension(1))
-        transforms.append(Interpolate(size=res_shape, mode="bilinear"))
+        frame_transforms = [
+            lambda frame: frame.unsqueeze(0),
+            ConvertDimensionOrder()
+        ]
 
-        self.frame_handler = WindowsFrameHandler(d3d, transforms=transforms)
+        if grayscale:
+            frame_transforms.append(Grayscale())
+
+        frame_transforms.append(Interpolate(size=res_shape, mode="bilinear"))
+        frame_transforms.append(lambda frame: frame.squeeze(0))
+
+        #stack_transforms = [StackDimension(1)]
+        stack_transforms = []
+        self.frame_handler = WindowsFrameHandler(
+            d3d, frame_transforms, stack_transforms
+        )
         
         self.episode_length = episode_length
         self.action_space = (self.actor.num_actions(),)
@@ -91,6 +103,9 @@ class SpeedRunnersEnv(Env):
         for _ in range(self.stacked_frames):
             self.frame_handler.get_new_frame()
 
+        if self.state is not None:
+            del self.state
+
         self.state = self.frame_handler.get_frame_stack(
             range(self.stacked_frames), "first"
         )
@@ -108,7 +123,7 @@ class SpeedRunnersEnv(Env):
         self.window = win32gui.FindWindow(
             None, SpeedRunnersEnv.PROCESS_NAME.split(".")[0]
         )
-        win32gui.SetForegroundWindow(self.window)
+        #win32gui.SetForegroundWindow(self.window)
 
         if self.memory is not None:
             self.memory.open_process_from_name(SpeedRunnersEnv.PROCESS_NAME)
@@ -142,6 +157,10 @@ class SpeedRunnersEnv(Env):
             self.actor.act(action)
 
             self.frame_handler.get_new_frame()
+
+            if self.state is not None:
+                del self.state
+
             self.state = self.frame_handler.get_frame_stack(
                 range(self.stacked_frames), "first"
             )
