@@ -123,7 +123,7 @@ class SpeedRunnersEnv(Env):
         self.window = win32gui.FindWindow(
             None, SpeedRunnersEnv.PROCESS_NAME.split(".")[0]
         )
-        #win32gui.SetForegroundWindow(self.window)
+        win32gui.SetForegroundWindow(self.window)
 
         if self.memory is not None:
             self.memory.open_process_from_name(SpeedRunnersEnv.PROCESS_NAME)
