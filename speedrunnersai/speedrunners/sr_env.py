@@ -72,8 +72,8 @@ class SpeedRunnersEnv(Env):
         frame_transforms.append(Interpolate(size=res_shape, mode="bilinear"))
         frame_transforms.append(lambda frame: frame.squeeze(0))
 
-        #stack_transforms = [StackDimension(1)]
-        stack_transforms = []
+        stack_transforms = [StackDimension(1)]
+
         self.frame_handler = WindowsFrameHandler(
             d3d, frame_transforms, stack_transforms
         )
