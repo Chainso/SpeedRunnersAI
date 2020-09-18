@@ -109,7 +109,7 @@ def get_args() -> Namespace:
 
     # Experience Replay args
     parser.add_argument(
-		"--er_capacity", type=float, default=10000,
+		"--er_capacity", type=float, default=7000,
 		help="the maximum amount of episodes in the replay buffer"
 	)
     parser.add_argument(
