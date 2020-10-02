@@ -103,11 +103,14 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-# Other files
+# Data files
 *.hdf5
 *.torch
+*.pt
+*.tfevents*
+
+# Workspace files
 *.code-workspace
 *.project
 *.pydevproject
 *.vscode
-*.tfevents*
