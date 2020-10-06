@@ -59,7 +59,7 @@ class SpeedRunnersEnv(Env):
         # Create the d3dshot instance
         capture_output = "pytorch_float" + ("_gpu" if device == "cuda" else "")
         d3d = d3dshot.create(
-            capture_output=capture_output, frame_buffer_size=4
+            capture_output=capture_output, frame_buffer_size=stacked_frames
         )
 
         frame_transforms = [
