@@ -53,6 +53,7 @@ class SpeedRunnersEnv(Env):
         self.stacked_frames = stacked_frames
         self.window_size = window_size
         self.actor = Actor()
+        self.last_window = None
         self.window = None
 
         # Create the d3dshot instance
@@ -152,18 +153,27 @@ class SpeedRunnersEnv(Env):
         Args:
             action (int): The index of the action to take.
         """
-        # Only act if the game window is in the foreground
-        if win32gui.GetForegroundWindow() == self.window:
-            self.actor.act(action)
+        # Only act if the game window is in the foreground, reset keyboard and
+        # mouse on switch from game to something else as well
+        window = win32gui.GetForegroundWindow()
+        while window != self.window:
+            if self.last_window == self.window:
+                self.actor.reset()
 
-            self.frame_handler.get_new_frame()
+            self.last_window = window
 
-            if self.state is not None:
-                del self.state
+        self.last_window = self.window
 
-            self.state = self.frame_handler.get_frame_stack(
-                range(self.stacked_frames), "first"
-            )
+        self.actor.act(action)
+
+        self.frame_handler.get_new_frame()
+
+        if self.state is not None:
+            del self.state
+
+        self.state = self.frame_handler.get_frame_stack(
+            range(self.stacked_frames), "first"
+        )
 
         # Update structures with new memory
         self._update_memory()
