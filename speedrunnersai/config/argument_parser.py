@@ -26,7 +26,7 @@ def get_args() -> Namespace:
         metavar="NUM_SECONDS", help="the duration of each episode in seconds"
     )
     parser.add_argument(
-        "--state_size", type=int, nargs=2, default=(128, 128),
+        "--state_size", type=int, nargs=2, default=(64, 64),
         metavar=("HEIGHT", "WIDTH"),
         help="the size of each state in (height width)"
     )

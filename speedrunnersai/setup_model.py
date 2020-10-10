@@ -28,7 +28,7 @@ class Autoencoder(Conv2dPolicy):
         out = super().forward(inp)
         return out.view(out.shape[0], -1)
 
-def setup_model(args: Namespace, train: bool = True) -> Tuple[
+def setup_model(args: Namespace) -> Tuple[
         SpeedRunnersEnv, Callable[[Logger], TorchRLAlgo], TorchRLAgent
     ]:
     """
@@ -68,10 +68,10 @@ def setup_model(args: Namespace, train: bool = True) -> Tuple[
     )
 
     autoencoder = Autoencoder(
-        (env.state_space[-1], 32, 64, 64, 64),
-        (8, 4, 4, 3),
-        (4, 2, 2, 1),
-        (0, 0, 0, 0),
+        (env.state_space[-1], 32, 64, 64),
+        (8, 4, 3),
+        (4, 2, 1),
+        (0, 0, 0),
         activation_fn
     )
 

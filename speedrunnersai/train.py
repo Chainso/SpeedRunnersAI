@@ -41,43 +41,64 @@ if __name__ == "__main__":
         args.er_beta_increment, args.er_epsilon
     )
 
-    done_event = mp.Event()
-
-    agent_queue = mp.Queue()
-    sample_queue = mp.Queue()
-    priority_queue = mp.Queue()
-
-    learner_args = (
-            algo, done_event, args.training_steps, sample_queue,
-            priority_queue, save_path, args.save_interval
-    )
-
-    worker_args = (
-            experience_replay, done_event, agent_queue, sample_queue,
-            priority_queue, args.batch_size, args.start_size,
-    )
-
-    agents = []
-    agent_train_args = []
-
     base_agents_logs_path = None
     if logs_path is not None:
         base_agents_logs_path = logs_path + "/train-agent-"
 
-    for i in range(args.num_agents):
-        agent_logger = None
-        if base_agents_logs_path is not None:
-            agent_logs_path = base_agents_logs_path + str(i + 1)
-            agent_logger = TensorboardLogger(agent_logs_path)
+    # Can't reinitialize CUDA on windows, so no parallelization in this format
+    # Also some pickle problems on windows, need to investigate
+    """
+    if str(args.device) == "cpu":
+        done_event = mp.Event()
 
-        agents.append(agent_builder(logger=agent_logger))
-        agent_train_args.append((
-            done_event, args.decay, args.n_steps, agent_queue
-        ))
+        agent_queue = mp.Queue()
+        sample_queue = mp.Queue()
+        priority_queue = mp.Queue()
 
-    runner = ApexRunner(done_event)
+        learner_args = (
+                algo, done_event, args.training_steps, sample_queue,
+                priority_queue, save_path, args.save_interval
+        )
 
+        worker_args = (
+                experience_replay, done_event, agent_queue, sample_queue,
+                priority_queue, args.batch_size, args.start_size,
+        )
+
+        agents = []
+        agent_train_args = []
+
+        # May be able to use virtual displays to parallelize in the future
+        for i in range(1):
+            agent_logger = None
+            if base_agents_logs_path is not None:
+                agent_logs_path = base_agents_logs_path + str(i + 1)
+                agent_logger = TensorboardLogger(agent_logs_path)
+
+            agents.append(agent_builder(logger=agent_logger))
+            agent_train_args.append((
+                done_event, args.decay, args.n_steps, agent_queue
+            ))
+
+        runner = ApexRunner(done_event)
+
+        env.start()
+        runner.start(learner_args, worker_args, agents, agent_train_args)
+        env.stop()
+    else:
+    """
+    agent_logger = None
+    if base_agents_logs_path is not None:
+        agent_logs_path = base_agents_logs_path + "0"
+        agent_logger = TensorboardLogger(agent_logs_path)
+
+    agent = agent_builder(logger=agent_logger)
 
     env.start()
-    runner.start(learner_args, worker_args, agents, agent_train_args)
+
+    agent.train(
+        args.episodes, args.decay, args.n_steps, experience_replay,
+        algo, args.batch_size, args.start_size
+    )
+
     env.stop()
