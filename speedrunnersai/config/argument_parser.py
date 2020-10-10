@@ -1,4 +1,6 @@
-from torch.cuda import is_available
+import torch
+
+from torch.cuda import is_available as cuda_available
 from argparse import ArgumentParser, Namespace
 
 def get_args() -> Namespace:
@@ -8,6 +10,16 @@ def get_args() -> Namespace:
     """
     parser = ArgumentParser("SpeedRunnersAI running configuration.")
 
+    # File args
+    parser.add_argument(
+        "-x", "--experiment_path", type=str,
+        help="the path to save experiment results and models"
+    )
+    parser.add_argument(
+        "--load_path", type=str,
+        help="the path of the saved model to load"
+    )
+    
     # Environment Arguments
     parser.add_argument(
         "--episode_length", type=int, default=120,
@@ -38,7 +50,27 @@ def get_args() -> Namespace:
             + "(left top right bottom), by default your entire screen"
     )
 
+    # Model parameter arguments
+    parser.add_argument(
+		"--device", type=torch.device,
+        default="cuda" if cuda_available() else "cpu",
+		help="the device tensors should be stored on, if not given, will use "
+            + "cuda if available"
+	)
+    parser.add_argument(
+        "--hidden_size", type=int, default=512,
+        help="the size of each hidden layer"
+    )
+    parser.add_argument(
+        "--num_layers", type=int, default=2,
+        help="the number of layers before the output layers"
+    )
+
     # Algorithm arguments
+    parser.add_argument(
+        "--exploration", choices=["rnd"],
+        help="The type of exploration to use [rnd]"
+    )
     parser.add_argument(
 		"--discount", type=float, default=0.99,
 		help="the next state reward discount factor"
@@ -60,44 +92,18 @@ def get_args() -> Namespace:
 		help="the threshhold of the huber loss (kappa) for IQN"
 	)
     parser.add_argument(
-        "--target_update_interval", type=float, default=500,
+        "--target_update_interval", type=float, default=1,
         help="the number of training steps in-between target network updates"
     )
     parser.add_argument(
 		"--lr", type=float, default=3e-4, help="the learning rate"
 	)
 
-    # Model parameter arguments
-    parser.add_argument(
-        "--device", type=str, default="cuda" if is_available() else "cpu",
-        metavar="DEVICE_NAME",
-        help="the device tensors should be stored on, if not given, will use "
-            + "cuda if available"
-    )
-    parser.add_argument(
-        "--hidden_size", type=int, default=512,
-        help="the size of each hidden layer"
-    )
-    parser.add_argument(
-        "--num_layers", type=int, default=2,
-        help="the number of layers before the output layers"
-    )
-
-    # Agent arguments
+    # Training/Playing arguments
     parser.add_argument(
 		"--episodes", type=int, default=10000,
-		help="the number of episodes to train for"
+		help="the number of episodes to play for if playing"
 	)
-    parser.add_argument(
-		"--decay", type=float, default=0.99,
-		help="the gamma decay for the target Q-values"
-	)
-    parser.add_argument(
-		"--n_steps", type=int, default=5,
-		help="the number of decay steps"
-	)
-
-    # Training arguments
     parser.add_argument(
 		"--batch_size", type=int, default=256,
 		help="the batch size of the training set"
@@ -106,6 +112,28 @@ def get_args() -> Namespace:
 		"--start_size", type=int, default=1024,
 		help="the size of the replay buffer before training"
 	)
+    parser.add_argument(
+        "--training_steps", type=int, default=100000,
+        help="the number of training steps to train for"
+    )
+    parser.add_argument(
+		"--save_interval", type=int, default=500,
+		help="the number of batches in between saves"
+	)
+
+    # Agent arguments
+    parser.add_argument(
+		"--decay", type=float, default=0.99,
+		help="the gamma decay for the target Q-values"
+	)
+    parser.add_argument(
+		"--n_steps", type=int, default=20,
+		help="the number of decay steps"
+	)
+    parser.add_argument(
+        "--silent", action="store_true",
+        help="will run without standard output from agents"
+    )
 
     # Experience Replay args
     parser.add_argument(
@@ -121,47 +149,13 @@ def get_args() -> Namespace:
 		help="the beta value for PER"
 	)
     parser.add_argument(
-		"--er_beta_increment", type=float, default=1e-3,
+		"--er_beta_increment", type=float, default=1e-6,
 		help="the increment of the beta value on each sample for PER"
 	)
     parser.add_argument(
-		"--er_epsilon", type=float, default=1e-2,
+		"--er_epsilon", type=float, default=1e-3,
 		help="the epsilon value for PER"
 	)
-    parser.add_argument(
-        "--burn_in_length", type=int, default=5,
-        help="if recurrent, the number of burn in samples for R2D2"
-    )
-    parser.add_argument(
-        "--sequence_length", type=int, default=5,
-        help="if recurrent, the length of the sequence to train on"
-    )
-    parser.add_argument(
-        "--max_factor", type=int, default=0.9,
-        help="if recurrent, factor of max priority to mean priority for R2D2"
-    )
-
-    # File-related arguments
-    parser.add_argument(
-        "--save_dir", type=str, default="./models", metavar="SAVE_DIR",
-        help="the directory to save models to"
-    )
-    parser.add_argument(
-        "--save_name", type=str, default="model", metavar="BASE_NAME",
-        help="the base name to append the step counter to when saving models"
-    )
-    parser.add_argument(
-		"--save_interval", type=int, default=500,
-		help="the number of batches in between saves"
-	)
-    parser.add_argument(
-        "--load_path", type=str, default=None, metavar="LOAD_PATH",
-        help="the path to load a previously saved model from, default none"
-    )
-    parser.add_argument(
-        "-l, --logs_path ", dest="logs_path", type=str, default="./logs",
-        help="log training data to tensorboard using the path"
-    )
 
     args = parser.parse_args()
 

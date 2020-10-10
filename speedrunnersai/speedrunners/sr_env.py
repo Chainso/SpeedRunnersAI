@@ -26,7 +26,7 @@ class SpeedRunnersEnv(Env):
         grayscale: bool = True,
         stacked_frames: int = 1,
         window_size: Optional[Tuple[int, int, int, int]] = None,
-        device: str = "cuda",
+        device: str = "cpu",
         read_mem: bool = False):
         """
         Creates the environment.
@@ -57,7 +57,9 @@ class SpeedRunnersEnv(Env):
         self.window = None
 
         # Create the d3dshot instance
-        capture_output = "pytorch_float" + ("_gpu" if device == "cuda" else "")
+        capture_output = (
+            "pytorch_float" + ("_gpu" if str(device) == "cuda" else "")
+        )
         d3d = d3dshot.create(
             capture_output=capture_output, frame_buffer_size=stacked_frames
         )
