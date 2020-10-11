@@ -76,7 +76,7 @@ def get_args() -> Namespace:
         help="The type of exploration to use [rnd]"
     )
     parser.add_argument(
-		"--discount", type=float, default=0.99,
+		"--discount", type=float, default=0.995,
 		help="the next state reward discount factor"
 	)
     parser.add_argument(

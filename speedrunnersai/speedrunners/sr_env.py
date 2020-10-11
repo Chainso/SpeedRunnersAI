@@ -99,7 +99,6 @@ class SpeedRunnersEnv(Env):
         self.last_action_time = 0
 
         self._last_time = 0
-        self.num_obstacles_hit = self._get_obstacles_hit()
         self.start_time = 0
 
     def reset(self) -> Any:
@@ -192,12 +191,8 @@ class SpeedRunnersEnv(Env):
             range(self.stacked_frames), "first"
         )
 
-        # Update structures with new memory
-        self._update_memory()
-
-        self._episode_finished(False)
-
         self._get_reward()
+        self._episode_finished(False)
 
         return self.state, self.reward, self.terminal, None
 
@@ -224,20 +219,20 @@ class SpeedRunnersEnv(Env):
         """
         Returns the reward for the current state of the environment.
         """
-        reward = np.power(1.01, self.match.players[0].speed() / 3) / 150
+        # Update structures with new memory
+        self._update_memory()
 
-        obst_dif = self._get_obstacles_hit() - self.num_obstacles_hit
+        # REWARD IS FOR SWING ACROSS MAP
+        player = self.match.players[0]
+        reward = np.power(1.01, player.speed() / 3) / 150
 
-        obst_reward = -0.05 * obst_dif
-        self.num_obstacles_hit += obst_dif
+        # Position starts at the top left, want to encourage going higher
+        reward -= (player.vertical_position - 1250) / 1000
 
-        if(self._reached_goal):
+        if self._reached_goal:
             reward += 10
-        elif(self.terminal):
-            reward = obst_reward
 
         self.reward = reward
-
 
     def _get_obstacles_hit(self) -> int:
         """
