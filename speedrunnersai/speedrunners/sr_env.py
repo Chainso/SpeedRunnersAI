@@ -164,6 +164,8 @@ class SpeedRunnersEnv(Env):
 
             self.last_window = window
 
+            window = win32gui.GetForegroundWindow()
+
         self.last_window = self.window
 
         self.actor.act(action)
@@ -209,7 +211,7 @@ class SpeedRunnersEnv(Env):
         """
         Returns the reward for the current state of the environment.
         """
-        reward = self.match.players[0].speed() / 700
+        reward = np.power(1.01, self.match.players[0].speed() / 3) / 150
 
         obst_dif = self._get_obstacles_hit() - self.num_obstacles_hit
 

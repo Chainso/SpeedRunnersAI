@@ -98,7 +98,7 @@ if __name__ == "__main__":
 
     agent.train(
         args.episodes, args.decay, args.n_steps, experience_replay,
-        algo, args.batch_size, args.start_size
+        algo, args.batch_size, args.start_size, save_path, args.save_interval
     )
 
     env.stop()
