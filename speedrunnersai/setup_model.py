@@ -58,7 +58,7 @@ def setup_model(args: Namespace) -> Tuple[
     )
     
     # Initialize SAC
-    activation_fn = nn.ReLU
+    activation_fn = nn.ELU
     optim = partial(torch.optim.Adam, lr=args.lr)
 
     # Setup networks
