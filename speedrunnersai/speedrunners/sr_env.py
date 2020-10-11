@@ -238,17 +238,17 @@ class SpeedRunnersEnv(Env):
             self.terminal = False
             self._reached_goal = False
         else:
-            if((self.episode_length is not None
+            if(self.match.current_time < self._last_time):
+                self._last_time = 0
+                self.terminal = True
+                self._reached_goal = True
+            elif((self.episode_length is not None
                 and self.match.current_time > self.episode_length)
                 or (self.episode_length is not None
                     and (time() - self.start_time) > self.episode_length)):
                 self._last_time = 0
                 self.terminal = True
                 self._reached_goal = False
-            elif(self.match.current_time < self._last_time):
-                self._last_time = 0
-                self.terminal = True
-                self._reached_goal = True
             else:
                 self._last_time = self.match.current_time
                 self.terminal = False
