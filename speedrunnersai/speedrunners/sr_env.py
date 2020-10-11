@@ -158,11 +158,12 @@ class SpeedRunnersEnv(Env):
         # Only act if the game window is in the foreground, reset keyboard and
         # mouse on switch from game to something else as well
         window = win32gui.GetForegroundWindow()
-        while window != self.window:
-            if self.last_window == self.window:
-                self.actor.reset()
 
+        while window != self.window:
             self.last_window = window
+
+        if self.last_window != self.window:
+            self.actor.reset()
 
         self.last_window = self.window
 
@@ -216,9 +217,9 @@ class SpeedRunnersEnv(Env):
         obst_reward = -0.05 * obst_dif
         self.num_obstacles_hit += obst_dif
 
-        if(self._reached_goal):
+        if self._reached_goal:
             reward += 10
-        elif(self.terminal):
+        elif self.terminal:
             reward = obst_reward
 
         self.reward = reward
