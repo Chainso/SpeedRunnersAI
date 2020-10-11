@@ -12,7 +12,7 @@ from hlrl.torch.vision.transforms import (
 )
 
 from speedrunnersai.speedrunners.actor import Actor
-from speedrunnersai.speedrunners.structures import Address, Player, Match
+from speedrunnersai.speedrunners.structures import Player, Match
 
 class SpeedRunnersEnv(Env):
     """
@@ -183,7 +183,7 @@ class SpeedRunnersEnv(Env):
         self._episode_finished(False)
 
         self._get_reward()
-        
+
         return self.state, self.reward, self.terminal, None
 
     def sample_action(self) -> int:
