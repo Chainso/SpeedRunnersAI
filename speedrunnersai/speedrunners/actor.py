@@ -6,8 +6,6 @@ from configparser import ConfigParser
 from os import path
 
 class Actor():
-    one_hot_acts = np.eye(17)
-
     ACTIONS = OrderedDict([
         ("left", [0, 0, 0, 0, 0, 1, 0]),
         ("left_boost", [0, 0, 0, 1, 0, 1, 0]),
@@ -21,10 +19,10 @@ class Actor():
         ("left_grapple_boost", [0, 1, 0, 1, 0, 1, 0]),
         ("right_grapple", [0, 1, 0, 0, 0, 0, 1]),
         ("right_grapple_boost", [0, 1, 0, 1, 0, 0, 1]),
-        ("left_item", [0, 0, 1, 0, 0, 1, 0]),
-        ("left_item_boost", [0, 0, 1, 1, 0, 1, 0]),
-        ("right_item", [0, 0, 1, 0, 0, 0, 1]),
-        ("right_item_boost", [0, 0, 1, 1, 0, 0, 1]),
+        #("left_item", [0, 0, 1, 0, 0, 1, 0]),
+        #("left_item_boost", [0, 0, 1, 1, 0, 1, 0]),
+        #("right_item", [0, 0, 1, 0, 0, 0, 1]),
+        #("right_item_boost", [0, 0, 1, 1, 0, 0, 1]),
         ("slide", [0, 0, 0, 0, 1, 0, 0]),
     ])
 
@@ -47,14 +45,6 @@ class Actor():
             self.speedrunners["LEFT"],
             self.speedrunners["RIGHT"]
         ]
-
-        self.action_values = [(self.speedrunners["JUMP"], 0),
-                              (self.speedrunners["GRAPPLE"], 0),
-                              (self.speedrunners["ITEM"], 0),
-                              (self.speedrunners["BOOST"], 0),
-                              (self.speedrunners["SLIDE"], 0),
-                              (self.speedrunners["LEFT"], 0),
-                              (self.speedrunners["RIGHT"], 0)]
 
         self._reset = self.speedrunners["RESET"]
 

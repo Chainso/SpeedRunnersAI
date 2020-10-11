@@ -48,7 +48,7 @@ def setup_model(args: Namespace) -> Tuple[
 
     # Environment
     env = SpeedRunnersEnv(
-        args.episode_length, args.state_size, not args.rgb,
+        args.episode_length, args.state_size, args.action_delay, not args.rgb,
         args.stacked_frames, args.window_size, args.device, args.read_memory
     )
 

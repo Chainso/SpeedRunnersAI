@@ -26,6 +26,10 @@ def get_args() -> Namespace:
         metavar="NUM_SECONDS", help="the duration of each episode in seconds"
     )
     parser.add_argument(
+        "--action_delay", type=float, default=0.2,
+        help="the time in seconds between each agent action"
+    )
+    parser.add_argument(
         "--state_size", type=int, nargs=2, default=(64, 64),
         metavar=("HEIGHT", "WIDTH"),
         help="the size of each state in (height width)"

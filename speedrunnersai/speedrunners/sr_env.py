@@ -23,6 +23,7 @@ class SpeedRunnersEnv(Env):
     def __init__(self,
         episode_length: float,
         res_shape: Tuple[int, int],
+        action_delay: float = 0,
         grayscale: bool = True,
         stacked_frames: int = 1,
         window_size: Optional[Tuple[int, int, int, int]] = None,
@@ -36,6 +37,8 @@ class SpeedRunnersEnv(Env):
                 before an environment reset.
             res_shape (Tuple[int, int]): The shape to resize the captured
                 images to.
+            action_delay (int): The amount of time in between actions, will wait
+                for the delay before committing the action.
             grayscale (bool): Will convert the image to grayscale if true.
             stacked_frames (int): The number of frames to stack
                 (along channel dimension)
@@ -47,6 +50,7 @@ class SpeedRunnersEnv(Env):
         """
         super().__init__()
 
+        self.action_delay = action_delay
         self.state_space = (
             res_shape + ((1 if grayscale else 3) * stacked_frames,)
         )
@@ -91,6 +95,8 @@ class SpeedRunnersEnv(Env):
         self.memory = Pymem() if read_mem else None
         self.match = Match()
         self.match.players.append(Player())
+
+        self.last_action_time = 0
 
         self._last_time = 0
         self.num_obstacles_hit = self._get_obstacles_hit()
@@ -167,6 +173,13 @@ class SpeedRunnersEnv(Env):
             window = win32gui.GetForegroundWindow()
 
         self.last_window = self.window
+
+        # Wait until the delay has passed
+        current_time = time()
+        while current_time - self.last_action_time < self.action_delay:
+            current_time = time()
+
+        self.last_action_time = current_time
 
         self.actor.act(action)
 
