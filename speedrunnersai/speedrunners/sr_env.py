@@ -96,10 +96,8 @@ class SpeedRunnersEnv(Env):
         self.match = Match()
         self.match.players.append(Player())
 
-        self.last_action_time = 0
-
         self._last_time = 0
-        self.start_time = 0
+        self.last_action_time = 0
 
     def reset(self) -> Any:
         """
@@ -117,7 +115,6 @@ class SpeedRunnersEnv(Env):
         self.state = self.frame_handler.get_frame_stack(
             range(self.stacked_frames), "first"
         )
-        self.start_time = time()
 
         return self.state
 
@@ -165,7 +162,7 @@ class SpeedRunnersEnv(Env):
         window = win32gui.GetForegroundWindow()
         while window != self.window:
             if self.last_window == self.window:
-                self.actor.reset()
+                self.actor.release_keys()
 
             self.last_window = window
 
@@ -244,18 +241,15 @@ class SpeedRunnersEnv(Env):
 
     def _episode_finished(self, reset: bool = False) -> None:
         if reset:
-            self._last_time = 0
             self.terminal = False
             self._reached_goal = False
         else:
-            if(self.match.current_time < self._last_time):
+            if self.match.current_time < self._last_time:
                 self._last_time = 0
                 self.terminal = True
                 self._reached_goal = True
-            elif((self.episode_length is not None
-                and self.match.current_time > self.episode_length)
-                or (self.episode_length is not None
-                    and (time() - self.start_time) > self.episode_length)):
+            elif(self.episode_length is not None
+                and self.match.current_time > self.episode_length):
                 self._last_time = 0
                 self.terminal = True
                 self._reached_goal = False

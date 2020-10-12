@@ -19,3 +19,7 @@ class Match(Structure):
         # Prelimnarily using the 1 player for all
         for player in self.players:
             player.update(memory, Address.BASE_PLAYER.value)
+
+        self.current_time = memory.read_float(
+            Address.CURRENT_TIME.value
+        )
