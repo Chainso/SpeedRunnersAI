@@ -105,6 +105,6 @@ def setup_model(args: Namespace) -> Tuple[
         algo.load(args.load_path)
 
     agent_builder = partial(OffPolicyAgent, env, algo, silent=args.silent)
-    agent_builder = compose([agent_builder, Agent])
+    agent_builder = compose(agent_builder, Agent)
 
     return env, algo, agent_builder

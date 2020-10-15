@@ -117,7 +117,7 @@ def get_args() -> Namespace:
 		help="the size of the replay buffer before training"
 	)
     parser.add_argument(
-        "--training_steps", type=int, default=100000000,
+        "--training_steps", type=int, default=200000000,
         help="the number of training steps to train for"
     )
     parser.add_argument(

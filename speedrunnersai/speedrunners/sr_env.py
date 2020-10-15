@@ -21,7 +21,7 @@ class SpeedRunnersEnv(Env):
     PROCESS_NAME = "speedrunners.exe"
 
     def __init__(self,
-        episode_length: float,
+        episode_length: int,
         res_shape: Tuple[int, int],
         action_delay: float = 0,
         grayscale: bool = True,

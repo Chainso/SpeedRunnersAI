@@ -4,6 +4,7 @@ import keyboard
 from collections import OrderedDict
 from configparser import ConfigParser
 from os import path
+from time import sleep
 
 class Actor():
     ACTIONS = OrderedDict([
@@ -46,7 +47,7 @@ class Actor():
             self.speedrunners["RIGHT"]
         ]
 
-        self._reset = self.speedrunners["RESET"]
+        self.reset_key = self.speedrunners["RESET"]
 
     @staticmethod
     def num_actions():
@@ -107,9 +108,13 @@ class Actor():
         """
         Resets the game.
         """
-        # Tap not working
         self.release_keys()
-        keyboard.press(self._reset)
+
+        # Tap (press_and_release) not working
+        # Try to find a viable solution without sleep
+        keyboard.press(self.reset_key)
+        sleep(1)
+        keyboard.release(self.reset_key)
 
     def stop(self):
         """
