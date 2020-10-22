@@ -1,34 +1,16 @@
 import numpy as np
 import keyboard
 
+from typing import Tuple
 from collections import OrderedDict
 from configparser import ConfigParser
 from os import path
 from time import sleep
 
-class Actor():
-    ACTIONS = OrderedDict([
-        ("left", [0, 0, 0, 0, 0, 1, 0]),
-        ("left_boost", [0, 0, 0, 1, 0, 1, 0]),
-        ("right", [0, 0, 0, 0, 0, 0, 1]),
-        ("right_boost", [0, 0, 0, 1, 0, 0, 1]),
-        ("left_jump", [1, 0, 0, 0, 0, 1, 0]),
-        ("left_jump_boost", [1, 0, 0, 1, 0, 1, 0]),
-        ("right_jump", [1, 0, 0, 0, 0, 0, 1]),
-        ("right_jump_boost", [1, 0, 0, 1, 0, 0, 1]),
-        ("left_grapple", [0, 1, 0, 0, 0, 1, 0]),
-        ("left_grapple_boost", [0, 1, 0, 1, 0, 1, 0]),
-        ("right_grapple", [0, 1, 0, 0, 0, 0, 1]),
-        ("right_grapple_boost", [0, 1, 0, 1, 0, 0, 1]),
-        #("left_item", [0, 0, 1, 0, 0, 1, 0]),
-        #("left_item_boost", [0, 0, 1, 1, 0, 1, 0]),
-        #("right_item", [0, 0, 1, 0, 0, 0, 1]),
-        #("right_item_boost", [0, 0, 1, 1, 0, 0, 1]),
-        ("slide", [0, 0, 0, 0, 1, 0, 0]),
-    ])
-
-    ACTION_ITEMS = list(ACTIONS.items())
-
+class ContinuousActor():
+    """
+    The actor to input actions to the game, using continuous values in (-1, 1)
+    """   
     def __init__(self):
         """
         Creates an actor for the game speedrunners
@@ -50,23 +32,23 @@ class Actor():
         self.reset_key = self.speedrunners["RESET"]
 
     @staticmethod
-    def num_actions():
+    def num_actions() -> int:
         """
         Returns the number of actions the actor can take.
         """
-        return len(Actor.ACTIONS)
+        return len(self.action_keys)
 
-    def act(self, action: int):
+    def act(self, action: Tuple[float]) -> None:
         """
         Causes the actor to act based on the action given.
 
-        action (int): The action for the actor to perform.
+        action (Tuple[float]): A tuple of values in (-1, 1) representation the
+            on/off state of each key.
         """
-        keys = Actor.ACTION_ITEMS[action][-1]
-        for i in range(len(keys)):
-            self.set_action(i, keys[i])
+        for i in range(len(action)):
+            self.set_action(i, action[i])
 
-    def set_action(self, action: int, value: int):
+    def set_action(self, action: int, value: int) -> None:
         """
         Will perform the action and set the value to 1 if the given value is
         positive, otherwise will stop performing the action and set the value
@@ -122,20 +104,20 @@ class Actor():
         """
         self.release_keys()
 
-    def continuous_to_discrete(self, action):
+    def continuous_to_discrete(self, action: Tuple[float]) -> int:
         """
         Converts an array of actions in the continuous form to a discrete
         action.
 
-        action : The action to convert
+        action (Tuple[float]): The action to convert.
         """
         return Actor.ACTIONS.keys().index(action)
 
-    def sample_action(self) -> int:
+    def sample_action(self) -> Tuple[float]:
         """
         Returns a random action.
         """
-        return np.random.randint(0, self.num_actions())
+        return 2 * np.random.rand(self.num_actions()) - 1
 
     def read_config(self):
         """
@@ -150,3 +132,51 @@ class Actor():
         config.read(config_path)
 
         return config["SpeedRunners Config"]                                                  
+
+class Actor(ContinuousActor):
+    """
+    The actor for the game using a preset of discrete action combinations.
+    """
+    ACTIONS = OrderedDict([
+        ("left", [0, 0, 0, 0, 0, 1, 0]),
+        ("left_boost", [0, 0, 0, 1, 0, 1, 0]),
+        ("right", [0, 0, 0, 0, 0, 0, 1]),
+        ("right_boost", [0, 0, 0, 1, 0, 0, 1]),
+        ("left_jump", [1, 0, 0, 0, 0, 1, 0]),
+        ("left_jump_boost", [1, 0, 0, 1, 0, 1, 0]),
+        ("right_jump", [1, 0, 0, 0, 0, 0, 1]),
+        ("right_jump_boost", [1, 0, 0, 1, 0, 0, 1]),
+        ("left_grapple", [0, 1, 0, 0, 0, 1, 0]),
+        ("left_grapple_boost", [0, 1, 0, 1, 0, 1, 0]),
+        ("right_grapple", [0, 1, 0, 0, 0, 0, 1]),
+        ("right_grapple_boost", [0, 1, 0, 1, 0, 0, 1]),
+        #("left_item", [0, 0, 1, 0, 0, 1, 0]),
+        #("left_item_boost", [0, 0, 1, 1, 0, 1, 0]),
+        #("right_item", [0, 0, 1, 0, 0, 0, 1]),
+        #("right_item_boost", [0, 0, 1, 1, 0, 0, 1]),
+        ("slide", [0, 0, 0, 0, 1, 0, 0]),
+    ])
+
+    ACTION_ITEMS = list(ACTIONS.items())
+
+    @staticmethod
+    def num_actions() -> int:
+        """
+        Returns the number of actions the actor can take.
+        """
+        return len(Actor.ACTIONS)
+
+    def act(self, action: int) -> None:
+        """
+        Causes the actor to act based on the action given.
+
+        action (int): The discrete action to take.
+        """
+        keys = Actor.ACTION_ITEMS[action][-1]
+        super().act(keys)
+
+    def sample_action(self) -> int:
+        """
+        Returns a random action.
+        """
+        return np.random.randint(0, self.num_actions())
